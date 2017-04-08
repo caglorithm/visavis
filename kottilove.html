@@ -1,0 +1,54 @@
+
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>KOTTI</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				font-family: Monospace;
+				background-color: #000;
+				color: #fff;
+				margin: 0px;
+				overflow: hidden;
+			}
+			#info {
+				color: #fff;
+				position: absolute;
+				top: 10px;
+				width: 100%;
+				text-align: center;
+				z-index: 100;
+				display:block;
+			}
+			#info a, .button { color: #f00; font-weight: bold; text-decoration: underline; cursor: pointer }
+		</style>
+	</head>
+
+	<body>
+		<div id="info">
+		<p id="gui"></p>
+		</div>
+
+		<script src="lib/three.js"></script>
+		<script src="lib/OrbitControls.js"></script>
+		<script src="lib/DeviceOrientationControls.js"></script>
+		<script src="lib/OBJLoader.js"></script>
+		<script src="lib/stats.min.js"></script>
+		<script src='lib/dat.gui.min.js'></script>
+		
+		<script src="lib/audioHandler.js"></script>
+
+		<script src="lib/postprocessing/EffectComposer.js"></script>
+		<script src="lib/postprocessing/RenderPass.js"></script>
+		<script src="lib/postprocessing/ShaderPass.js"></script>
+		<script src="lib/postprocessing/MaskPass.js"></script> 
+		<script src="shaders/StaticShader.js"></script>
+		<script src="shaders/BokehShader2.js"></script>
+		<script src="shaders/CopyShader.js"></script>
+		<script src="shaders/RGBShiftShader.js"></script>
+
+		<script src="main.js"></script>
+	</body>
+</html>
