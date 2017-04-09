@@ -138,8 +138,6 @@ function init() {
 
 	camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 800 );
 	
-	camera.position.z = 10;
-	camera.position.y = -15;
 
 	// ----------- SCENE -----------
 
@@ -218,19 +216,109 @@ function init() {
 
 		} );
 
+		drawCoords = false
+		if (drawCoords) {
+					// coordinate systems helper
+		  var axes = new THREE.AxisHelper();            // add axes
+  scene.add( axes );
+  
+  var cube = new THREE.Mesh(
+                          new THREE.CubeGeometry( 1, .1, .1 ),
+                          new THREE.MeshLambertMaterial( { color: 0xff0000 } )
+                      );
+  cube.position.set(0.5,0,0);
+  scene.add( cube );
+  var cube = new THREE.Mesh(
+                          new THREE.CubeGeometry( .1, 1, .1 ),
+                          new THREE.MeshLambertMaterial( { color: 0x00ff00 } )
+                      );
+  cube.position.set(0,0.5,0);
+  scene.add( cube );
+  var cube = new THREE.Mesh(
+                          new THREE.CubeGeometry( .1, .1, 1 ),
+                          new THREE.MeshLambertMaterial( { color: 0x0000ff } )
+                      );
+  cube.position.set(0,0,0.5);
+  scene.add( cube );
+
+  var light = new THREE.PointLight( 0xFFFFFF );
+  light.position.set( 20, 20, 20 );
+  scene.add( light );
+
+		var material = new THREE.LineBasicMaterial({
+			color: 0xffffff,
+			linewidth: 50
+		});
+
+		var geometry = new THREE.Geometry();
+		geometry.vertices.push(
+			new THREE.Vector3( -5, -5, 0 ),
+			new THREE.Vector3( -5, 5, 0 ),
+			new THREE.Vector3( 5, 5, 0 ),
+			new THREE.Vector3( 5, -5, 0 ),
+			new THREE.Vector3( -5, -5, 0 ),
+			new THREE.Vector3( 5, 5, 0 ),
+			new THREE.Vector3( 5, 5, 5 )
+		);
+
+		var line = new THREE.Line( geometry, material );
+		scene.add( line );
+
 		
 		cityGeometry.computeBoundingBox ();
+
+
+		var geometry = new THREE.Geometry();
+		geometry.vertices.push(
+			new THREE.Vector3( cityGeometry.boundingBox.min.x, cityGeometry.boundingBox.min.y, 0 ),
+			new THREE.Vector3( cityGeometry.boundingBox.min.x, cityGeometry.boundingBox.max.y, 0 ),
+			new THREE.Vector3( cityGeometry.boundingBox.max.x, cityGeometry.boundingBox.max.y, 0 ),
+			new THREE.Vector3( cityGeometry.boundingBox.max.x, cityGeometry.boundingBox.min.y, 0 )
+			//new THREE.Vector3( cityGeometry.boundingBox.min.y, -5, 0 ),
+			//new THREE.Vector3( 5, 5, 0 )
+		);
+
+		var line = new THREE.Line( geometry, material );
+		cityMesh.add( line );
+		}
+
 
 		// add our mesh to our group 
 		// we could change attributes of our Group here
 		//cityMesh.rotation.x= -Math.PI/4;
 		
-		cityMesh.geometry.applyMatrix( object.matrix );
-		cityMesh.position.x = -(cityGeometry.boundingBox.max.x+cityGeometry.boundingBox.min.x)/2;
-		cityMesh.position.y = -(cityGeometry.boundingBox.max.y+cityGeometry.boundingBox.min.y)/2;
-		cityMesh.position.z = -(cityGeometry.boundingBox.max.z+cityGeometry.boundingBox.min.z)/2;
-		cityMesh.updateMatrix();
-		//cityMesh.rotation.x= -Math.PI/4;
+		//cityMesh.geometry.applyMatrix( cityMesh.matrix );
+		//cityMesh.position.x = -(cityGeometry.boundingBox.max.x+cityGeometry.boundingBox.min.x)/2;
+		//cityMesh.position.z = (cityGeometry.boundingBox.min.z-cityGeometry.boundingBox.max.z)/2;
+		//cityMesh.position.y = -(cityGeometry.boundingBox.max.y+cityGeometry.boundingBox.min.y)/2;
+		//cityMesh.position.z = -(cityGeometry.boundingBox.max.z+cityGeometry.boundingBox.min.z)/2;
+		
+		//cityGeometry.computeBoundingBox ();
+
+		//controls.target.set( -(cityGeometry.boundingBox.max.x+cityGeometry.boundingBox.min.x)/2, -(cityGeometry.boundingBox.max.y+cityGeometry.boundingBox.min.y)/2, -(cityGeometry.boundingBox.max.z+cityGeometry.boundingBox.min.z)/2 );
+		//cityMesh.updateMatrix();
+
+		cityMesh.rotation.x= -Math.PI/2;
+		cityMesh.position.x = -2.8;
+		cityMesh.position.z = -3.2;
+		cityMesh.position.y = -8;
+		//cityMesh.position.x = -15; //-(cityGeometry.boundingBox.max.x+cityGeometry.boundingBox.min.x)/2;
+
+	
+		camera.position.z = 17;
+		//camera.position.z = -5;
+		camera.position.y = 10;
+		//camera.scale = 2;
+		//camera.up = new THREE.Vector3(0, 0, 1);
+		//controls.target.copy(cityMesh.position)
+
+		//camera.position = new THREE.Vector3( 0, 0, 15 );
+		//controls.target = new THREE.Vector3( 10, 10, 0 );
+		//camera.position.x = (cityGeometry.boundingBox.max.x+cityGeometry.boundingBox.min.x)/2;
+		//camera.position.y = (cityGeometry.boundingBox.max.y+cityGeometry.boundingBox.min.y)/2;
+		//camera.position.z = (cityGeometry.boundingBox.max.z+cityGeometry.boundingBox.min.z)/2;
+		console.log("cityMesh");
+		console.log(cityMesh);
 		cityGroup.add(cityMesh);
 		console.log("Bounding box");
 		console.log(cityGeometry.boundingBox);
@@ -286,7 +374,7 @@ function init() {
     // BOKEH
 
 	material_depth = new THREE.MeshDepthMaterial();
-	initPostprocessing();
+	//initPostprocessing();
 
 	//renderer.autoClear = false;
 
@@ -319,23 +407,46 @@ function init() {
 	};
 
 	console.log('POSTPROCESSING ' + postprocessing.enabled );
-	matChanger();
+	//matChanger();
 
 
 	// Shaders pass ----------------------------------
+	//Create Shader Passes
 	renderPass = new THREE.RenderPass( scene, camera );
+	badTVPass = new THREE.ShaderPass( THREE.BadTVShader );
+	rgbPass = new THREE.ShaderPass( THREE.RGBShiftShader );
+	filmPass = new THREE.ShaderPass( THREE.FilmShader );
 	staticPass = new THREE.ShaderPass( THREE.StaticShader );
 	copyPass = new THREE.ShaderPass( THREE.CopyShader );
-	rgbPass = new THREE.ShaderPass( THREE.RGBShiftShader );
+
+	//set shader uniforms
+	filmPass.uniforms[ "grayscale" ].value = 0;
+
+	badTVParams = {
+		show: false,
+		distortion: 2.0,
+		distortion2: 1.0,
+		speed: 0.3,
+		rollSpeed: 0.01
+	}
+
 	staticParams = {
 		show: true,
-		amount:0.1,
+		amount:0.05,
 		size2:2.0
-	}	
+	}
+
 	rgbParams = {
 		show: true,
 		amount: 0.005,
 		angle: 0.0,
+	}
+
+	filmParams = {
+		show: false,
+		count: 800,
+		sIntensity: 0.9,
+		nIntensity: 0.4
 	}
 	rgbPass.uniforms[ "angle" ].value = rgbParams.angle*Math.PI;
 	rgbPass.uniforms[ "amount" ].value = rgbParams.amount;
@@ -348,6 +459,7 @@ function init() {
 	// DAT.GUI INTERFACE
 	initializeGui();	
 
+	//generateGIF();
 				
 }
 
@@ -374,12 +486,21 @@ function onToggleShaders(){
 	//order is important 
 	composer = new THREE.EffectComposer( renderer);
 	composer.addPass( renderPass );
+	if (filmParams.show){
+		composer.addPass( filmPass );
+	}
+
+	if (badTVParams.show){
+		composer.addPass( badTVPass );
+	}
+
+	if (rgbParams.show){
+		composer.addPass( rgbPass );
+	}
+
 	if (staticParams.show){
 		composer.addPass( staticPass );
 	}
-	if (rgbParams.show){
-				composer.addPass( rgbPass );
-	}	
 	composer.addPass( copyPass );
 	copyPass.renderToScreen = true;
 }
@@ -402,7 +523,7 @@ function onDocumentMouseMove( event ) {
 	mouse.x = ( event.clientX - windowHalfX ) / windowHalfX;
 	mouse.y = - ( event.clientY - windowHalfY ) / windowHalfY;
 
-	postprocessing.bokeh_uniforms[ 'focusCoords' ].value.set(event.clientX / window.innerWidth, 1-event.clientY / window.innerHeight);
+	//postprocessing.bokeh_uniforms[ 'focusCoords' ].value.set(event.clientX / window.innerWidth, 1-event.clientY / window.innerHeight);
 }
 
 function onDocumentTouchStart( event ) {
@@ -433,8 +554,8 @@ function onDocumentTouchMove( event ) {
 
 function animate() {
 	shaderTime += 0.1;
-	//badTVPass.uniforms[ 'time' ].value =  shaderTime;
-	//filmPass.uniforms[ 'time' ].value =  shaderTime;
+	badTVPass.uniforms[ 'time' ].value =  shaderTime;
+	filmPass.uniforms[ 'time' ].value =  shaderTime;
 	staticPass.uniforms[ 'time' ].value =  shaderTime;
 
 	requestAnimationFrame( animate );
@@ -494,7 +615,7 @@ function render() {
 
 	// ----------- RENDERER -----------
 
-	renderBokeh();
+	//renderBokeh();
 
 
 	//renderer.render( scene, camera );
@@ -515,11 +636,13 @@ function animateBuildings(){
 
 	//volumeHistory.push(Math.exp(normLevel+1)/5);
 	(Math.random() < 0.1) && console.log('volume', normLevel);
+	//(Math.random() < 0.1) && console.log('camera', camera);
+
 	volumeHistory.push(normLevel);
 	volumeHistory.shift();
 
 	rgbParams.angle = Math.random()*2
-	if (Math.random() < 0.1) { rgbParams.amount = 0.015; }
+	if (Math.random() < 0.1) { rgbParams.amount = normLevel; }
 	else { rgbParams.amount = 0.01*(Math.random()+1)/5; }
 	//rgbParams.amount = (Math.random()+1)*normLevel*0.1;
 	
@@ -608,26 +731,21 @@ function initializeCity(){
 
 
 function onParamsChange() {
-			//copy gui params into shader uniforms
-			/*badTVPass.uniforms[ "distortion" ].value = badTVParams.distortion;
-			badTVPass.uniforms[ "distortion2" ].value = badTVParams.distortion2;
-			badTVPass.uniforms[ "speed" ].value = badTVParams.speed;
-			badTVPass.uniforms[ "rollSpeed" ].value = badTVParams.rollSpeed;
+	//copy gui params into shader uniforms
+	badTVPass.uniforms[ "distortion" ].value = badTVParams.distortion;
+	badTVPass.uniforms[ "distortion2" ].value = badTVParams.distortion2;
+	badTVPass.uniforms[ "speed" ].value = badTVParams.speed;
+	badTVPass.uniforms[ "rollSpeed" ].value = badTVParams.rollSpeed;
 
-			staticPass.uniforms[ "amount" ].value = staticParams.amount;
-			staticPass.uniforms[ "size" ].value = staticParams.size2;
+	staticPass.uniforms[ "amount" ].value = staticParams.amount;
+	staticPass.uniforms[ "size" ].value = staticParams.size2;
 
-			rgbPass.uniforms[ "angle" ].value = rgbParams.angle*Math.PI;
-			rgbPass.uniforms[ "amount" ].value = rgbParams.amount;
+	rgbPass.uniforms[ "angle" ].value = rgbParams.angle*Math.PI;
+	rgbPass.uniforms[ "amount" ].value = rgbParams.amount;
 
-			filmPass.uniforms[ "sCount" ].value = filmParams.count;
-			filmPass.uniforms[ "sIntensity" ].value = filmParams.sIntensity;
-			filmPass.uniforms[ "nIntensity" ].value = filmParams.nIntensity;*/
-			staticPass.uniforms[ "amount" ].value = staticParams.amount;
-			staticPass.uniforms[ "size" ].value = staticParams.size2;	
-
-			rgbPass.uniforms[ "angle" ].value = rgbParams.angle*Math.PI;
-			rgbPass.uniforms[ "amount" ].value = rgbParams.amount;		
+	filmPass.uniforms[ "sCount" ].value = filmParams.count;
+	filmPass.uniforms[ "sIntensity" ].value = filmParams.sIntensity;
+	filmPass.uniforms[ "nIntensity" ].value = filmParams.nIntensity;
 }
 
 
@@ -678,17 +796,32 @@ function initializeGui(){
 	f1.add( shaderSettings, "rings", 1, 8).step(1).onChange( shaderUpdate );
 	f1.add( shaderSettings, "samples", 1, 13).step(1).onChange( shaderUpdate );	
 
-	var f2 = gui.addFolder('RGB Shift');
-	f2.add(rgbParams, 'show').onChange(onToggleShaders);
-	f2.add(rgbParams, 'amount', 0.0, 0.1).listen().onChange(onParamsChange);
-	f2.add(rgbParams, 'angle', 0.0, 2.0).listen().onChange(onParamsChange);
-	f2.open();	
+			var f1 = gui.addFolder('Bad TV');
+			f1.add(badTVParams, 'show').onChange(onToggleShaders);
+			f1.add(badTVParams, 'distortion', 0.1, 20).step(0.1).listen().name("Thick Distort").onChange(onParamsChange);
+			f1.add(badTVParams, 'distortion2', 0.1, 20).step(0.1).listen().name("Fine Distort").onChange(onParamsChange);
+			f1.add(badTVParams, 'speed', 0.0,1.0).step(0.01).listen().name("Distort Speed").onChange(onParamsChange);
+			f1.add(badTVParams, 'rollSpeed', 0.0,1.0).step(0.01).listen().name("Roll Speed").onChange(onParamsChange);
+			f1.open();
 
-	var f4 = gui.addFolder('Static');
-	f4.add(staticParams, 'show').onChange(onToggleShaders);
-	f4.add(staticParams, 'amount', 0.0,1.0).step(0.01).listen().onChange(onParamsChange);
-	f4.add(staticParams, 'size2', 1.0,100.0).step(1.0).onChange(onParamsChange);
-	f4.open();
+			var f2 = gui.addFolder('RGB Shift');
+			f2.add(rgbParams, 'show').onChange(onToggleShaders);
+			f2.add(rgbParams, 'amount', 0.0, 0.1).listen().onChange(onParamsChange);
+			f2.add(rgbParams, 'angle', 0.0, 2.0).listen().onChange(onParamsChange);
+			f2.open();
+
+			var f4 = gui.addFolder('Static');
+			f4.add(staticParams, 'show').onChange(onToggleShaders);
+			f4.add(staticParams, 'amount', 0.0,1.0).step(0.01).listen().onChange(onParamsChange);
+			f4.add(staticParams, 'size2', 1.0,100.0).step(1.0).onChange(onParamsChange);
+			f4.open();
+
+			var f3 = gui.addFolder('Scanlines');
+			f3.add(filmParams, 'show').onChange(onToggleShaders);
+			f3.add(filmParams, 'count', 50, 1000).onChange(onParamsChange);
+			f3.add(filmParams, 'sIntensity', 0.0, 2.0).step(0.1).onChange(onParamsChange);
+			f3.add(filmParams, 'nIntensity', 0.0, 2.0).step(0.1).onChange(onParamsChange);
+			f3.open();
 }
 
 function initPostprocessing() {
