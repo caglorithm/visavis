@@ -7,7 +7,7 @@ A small personal project to learn JavaScript and THREE.js. Coming from Processin
 ![demo](assets/3.gif)
 
 ### Mt. Everest 
-With several shaders implemented. Shaders and `audioHandler.js` are borrowed from [here](https://www.airtightinteractive.com/demos/js/badtvshader/). Generally, [airtightinteractive.com](https://www.airtightinteractive.com/2013/10/making-audio-reactive-visuals/) was a great resource for me to learn THREE.js. 
+With several shaders implemented. Shaders and `audioHandler.js` are borrowed from [here](https://www.airtightinteractive.com/demos/js/badtvshader/) and [here](https://www.airtightinteractive.com/demos/js/uberviz/audioanalysis/). Generally, [airtightinteractive.com](https://www.airtightinteractive.com/2013/10/making-audio-reactive-visuals/) was a great resource for me to learn THREE.js. 
 
 ![demo](assets/1.gif)
 ![demo](assets/2.gif)
