@@ -1,5 +1,5 @@
 # visavis
-This is a small personal project to learn JavaScript and THREE.js (my first time I'm writing JS, please be nice). Coming from Processing, I found THREE.js to be insanely fast for being executed in the Browser.
+This is a small personal project to learn JavaScript and THREE.js (my first time writing JS, please be nice). Coming from Processing, I found THREE.js to be insanely fast for being executed in the Browser.
 
 The 3D OBJ animated geo models shown here were downloaded using this little [tool](https://github.com/karimnaaji/vectiler).
 
