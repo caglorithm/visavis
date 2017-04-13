@@ -9,7 +9,8 @@ Here we load a model of the famous David sculpture by Michelangelo. The center o
 ![demo](assets/david_wavy.gif)
 
 Now we don't loop through every single vortex and apply the wave ampltide to it but select each vertex with a 10% change like this:
-`	// ANIAMTE EVERYTHING
+`	
+// ANIAMTE EVERYTHING
 	if (1 == 1) {
 		for ( var i = 0, l = cityGeometry.vertices.length; i < l; i += 10 ) {
 			if (Math.random() < 0.2) {
@@ -23,5 +24,6 @@ Now we don't loop through every single vortex and apply the wave ampltide to it 
 			cityGeometry.vertices[ i ].z = originalPositions[ i ].z + volumeHistory[normDistance] * 20;
 			}
 		}
-	}`
+	}
+`
 ![demo](assets/david_glitch.gif)
