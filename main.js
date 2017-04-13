@@ -20,7 +20,7 @@ var orientationControl;
 var cityMesh;
 var cityGeometry;
 var cityGroup;
-
+var wireframeGeometry;
 var normalMaterial;
 
 var originalPositions; 
@@ -72,6 +72,8 @@ var effectController;
 
 // SHADERS -----------------------
 
+var SHADERS = false;
+
 var composer;
 var shaderTime = 0;
 var badTVParams, badTVPass;		
@@ -88,19 +90,10 @@ animate();
 
 function init() {
 	console.log("TESTESTSETSETSETSE");
-	//console.log(isPlaying);
-	
-	// pitchdetect.js
-	//toggleLiveInput();
-
 
 	// audioHandler.js
 	audioContext = new AudioContext();
 	getMicInput();
-
-	//AudioHandler.init();
-	//AudioHandler.onUseMic();
-
 
 	// ----------- RENDERER -----------
 
@@ -109,6 +102,9 @@ function init() {
 	renderer.setSize( window.innerWidth, window.innerHeight );
 	renderer.domElement.style.position = 'absolute';
 	renderer.domElement.style.top = 0;
+	
+	// background color
+	renderer.setClearColor (0x2e353f, 1);
 
 	container = document.createElement( 'div' );
 	document.body.appendChild( container );
@@ -162,7 +158,7 @@ function init() {
 	cityGroup = new THREE.Object3D();
 	cityGeometry = new THREE.Geometry();
 
-	loader.load( 'obj/mteverest_big.obj', function ( object ) {
+	loader.load( 'obj/david_big.obj', function ( object ) {
 		// doesn't work: shadows?
 		//cityGroup.castsShadow = true;
   		//cityGroup.receiveShadow = true;	
@@ -172,10 +168,7 @@ function init() {
 			if ( child instanceof THREE.Mesh ) {
 				// get Geometry from BufferGeometry
 				cityGeometry = new THREE.Geometry().fromBufferGeometry( child.geometry );
-				child.castShadow = true;
-				
-				// deep copy oriringal positions array
-				originalPositions = cityGeometry.vertices.map(function (v) { return v.clone() });			
+				child.castShadow = true;			
 				
 				// loop through / edit initial geometry here
 
@@ -196,16 +189,18 @@ function init() {
 						shininess: 50,
 						reflectivity: 1.0
 					});
-
-				cityMesh = new THREE.Mesh(cityGeometry, material);
+				console.log("Geometry");
+				console.log(cityGeometry);
+				cityMesh = new THREE.Mesh(cityGeometry, normalMaterial);
 
 			    // wireframe 
 			    var drawWireframe = true;
 			    if ( drawWireframe ) {
-				    var geo = new THREE.EdgesGeometry( cityMesh.geometry ); // or WireframeGeometry
-				    wireframeGeometry = geo;
+				    wireframeGeometry = new THREE.EdgesGeometry( cityMesh.geometry ); // or WireframeGeometry
+				    wireframeGeometry.center( cityMesh.position ); // this re-sets the mesh position
+				    wireframeGeometry.translate(0, 0, 5);
 				    var mat = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 0.5 } );
-				    var wireframe = new THREE.LineSegments( geo, mat );
+				    var wireframe = new THREE.LineSegments( wireframeGeometry, mat );
 				    cityMesh.add( wireframe );
 			    }
 			    
@@ -216,39 +211,41 @@ function init() {
 
 		} );
 
+		// --------- TEMP: DRAW COORDINATE AXIS ---------
+
 		drawCoords = false
 		if (drawCoords) {
 					// coordinate systems helper
 		  var axes = new THREE.AxisHelper();            // add axes
-  scene.add( axes );
-  
-  var cube = new THREE.Mesh(
-                          new THREE.CubeGeometry( 1, .1, .1 ),
-                          new THREE.MeshLambertMaterial( { color: 0xff0000 } )
-                      );
-  cube.position.set(0.5,0,0);
-  scene.add( cube );
-  var cube = new THREE.Mesh(
-                          new THREE.CubeGeometry( .1, 1, .1 ),
-                          new THREE.MeshLambertMaterial( { color: 0x00ff00 } )
-                      );
-  cube.position.set(0,0.5,0);
-  scene.add( cube );
-  var cube = new THREE.Mesh(
-                          new THREE.CubeGeometry( .1, .1, 1 ),
-                          new THREE.MeshLambertMaterial( { color: 0x0000ff } )
-                      );
-  cube.position.set(0,0,0.5);
-  scene.add( cube );
+		  scene.add( axes );
+		  
+		  var cube = new THREE.Mesh(
+		                          new THREE.CubeGeometry( 1, .1, .1 ),
+		                          new THREE.MeshLambertMaterial( { color: 0xff0000 } )
+		                      );
+		  cube.position.set(0.5,0,0);
+		  scene.add( cube );
+		  var cube = new THREE.Mesh(
+		                          new THREE.CubeGeometry( .1, 1, .1 ),
+		                          new THREE.MeshLambertMaterial( { color: 0x00ff00 } )
+		                      );
+		  cube.position.set(0,0.5,0);
+		  scene.add( cube );
+		  var cube = new THREE.Mesh(
+		                          new THREE.CubeGeometry( .1, .1, 1 ),
+		                          new THREE.MeshLambertMaterial( { color: 0x0000ff } )
+		                      );
+		  cube.position.set(0,0,0.5);
+		  scene.add( cube );
 
-  var light = new THREE.PointLight( 0xFFFFFF );
-  light.position.set( 20, 20, 20 );
-  scene.add( light );
+		  var light = new THREE.PointLight( 0xFFFFFF );
+		  light.position.set( 20, 20, 20 );
+		  scene.add( light );
 
-		var material = new THREE.LineBasicMaterial({
-			color: 0xffffff,
-			linewidth: 50
-		});
+				var material = new THREE.LineBasicMaterial({
+					color: 0xffffff,
+					linewidth: 50
+				});
 
 		var geometry = new THREE.Geometry();
 		geometry.vertices.push(
@@ -275,58 +272,70 @@ function init() {
 			new THREE.Vector3( cityGeometry.boundingBox.max.x, cityGeometry.boundingBox.max.y, 0 ),
 			new THREE.Vector3( cityGeometry.boundingBox.max.x, cityGeometry.boundingBox.min.y, 0 )
 			//new THREE.Vector3( cityGeometry.boundingBox.min.y, -5, 0 ),
+			//new THREE.Box3 (cityGeometry.boundingBox.min, cityGeometry.boundingBox.max)
 			//new THREE.Vector3( 5, 5, 0 )
 		);
 
 		var line = new THREE.Line( geometry, material );
 		cityMesh.add( line );
+
+
+		// DRAW BOUNDING BOX OF OBJECT
+		//  This is where introtowebgl uses CubeGeometry
+		var geometry = new THREE.BoxGeometry(
+			cityGeometry.boundingBox.min.x- cityGeometry.boundingBox.max.x,
+			cityGeometry.boundingBox.min.y- cityGeometry.boundingBox.max.y,
+			cityGeometry.boundingBox.min.z- cityGeometry.boundingBox.max.z);
+
+		var material = new THREE.MeshBasicMaterial({color:0x00ff20});
+
+
+
+		
+		var cube = new THREE.Mesh(geometry,material);
+		console.log('CUBE');
+		console.log( cityMesh.position.x, cityMesh.position.y, cityMesh.position.z );
+		cube.position.set( cityGeometry.boundingBox.min.x, cityGeometry.boundingBox.min.y, cityGeometry.boundingBox.min.z );
+		console.log(cube);
+		
+		scene.add(cube);
+
+
 		}
 
+		// ----------- CENTER and ROTATE GEOMETRY TO MESH CENTER -------------
 
-		// add our mesh to our group 
-		// we could change attributes of our Group here
-		//cityMesh.rotation.x= -Math.PI/4;
-		
-		//cityMesh.geometry.applyMatrix( cityMesh.matrix );
-		//cityMesh.position.x = -(cityGeometry.boundingBox.max.x+cityGeometry.boundingBox.min.x)/2;
-		//cityMesh.position.z = (cityGeometry.boundingBox.min.z-cityGeometry.boundingBox.max.z)/2;
-		//cityMesh.position.y = -(cityGeometry.boundingBox.max.y+cityGeometry.boundingBox.min.y)/2;
-		//cityMesh.position.z = -(cityGeometry.boundingBox.max.z+cityGeometry.boundingBox.min.z)/2;
-		
-		//cityGeometry.computeBoundingBox ();
+		// FOT THE MAP DATA FROM VECTILER WE NEED TO ROTATE THE MODEL PROPERLY
+		var ROTATE_VECTILER = false
+		if (ROTATE_VECTILER) {
+			cityMesh.rotation.x= -Math.PI/2;
+		}
 
-		//controls.target.set( -(cityGeometry.boundingBox.max.x+cityGeometry.boundingBox.min.x)/2, -(cityGeometry.boundingBox.max.y+cityGeometry.boundingBox.min.y)/2, -(cityGeometry.boundingBox.max.z+cityGeometry.boundingBox.min.z)/2 );
-		//cityMesh.updateMatrix();
+		// ----------- CENTER GEOMETRY TO MESH CENTER 
 
-		cityMesh.rotation.x= -Math.PI/2;
-		cityMesh.position.x = -2.8;
-		cityMesh.position.z = -3.2;
-		cityMesh.position.y = -8;
-		//cityMesh.position.x = -15; //-(cityGeometry.boundingBox.max.x+cityGeometry.boundingBox.min.x)/2;
+		cityGeometry.center( cityMesh.position ); // this re-sets the mesh position
+		cityMesh.position.multiplyScalar( - 1 );
 
-	
+		// deep copy oriringal positions array
+		originalPositions = cityGeometry.vertices.map(function (v) { return v.clone() });
+
+		// --------- position camera --------
 		camera.position.z = 17;
-		//camera.position.z = -5;
-		camera.position.y = 10;
-		//camera.scale = 2;
-		//camera.up = new THREE.Vector3(0, 0, 1);
-		//controls.target.copy(cityMesh.position)
+		camera.position.y = 10;		
+		
+		// add to group and render
+		cityGroup.add(cityMesh);
+		scene.add( cityGroup );	
 
-		//camera.position = new THREE.Vector3( 0, 0, 15 );
-		//controls.target = new THREE.Vector3( 10, 10, 0 );
-		//camera.position.x = (cityGeometry.boundingBox.max.x+cityGeometry.boundingBox.min.x)/2;
-		//camera.position.y = (cityGeometry.boundingBox.max.y+cityGeometry.boundingBox.min.y)/2;
-		//camera.position.z = (cityGeometry.boundingBox.max.z+cityGeometry.boundingBox.min.z)/2;
+		// --------- debug output
 		console.log("cityMesh");
 		console.log(cityMesh);
-		cityGroup.add(cityMesh);
 		console.log("Bounding box");
 		console.log(cityGeometry.boundingBox);
 		// default: add group
-		scene.add( cityGroup );	
+		
 		// instead, we could also add the Mesh directly
 		//scene.add(cityMesh);
-		
 
 		// if I add this object directly, it interacts with light... why?
 		// because it's a MeshPhongMaterial and lights attribute is true, if set to false it crashes
@@ -371,8 +380,8 @@ function init() {
 
     }
 
-    // BOKEH
-
+    // ---------------- SHADERS ----------------
+    if (SHADERS) {
 	material_depth = new THREE.MeshDepthMaterial();
 	//initPostprocessing();
 
@@ -431,13 +440,13 @@ function init() {
 	}
 
 	staticParams = {
-		show: true,
+		show: false,
 		amount:0.05,
 		size2:2.0
 	}
 
 	rgbParams = {
-		show: true,
+		show: false,
 		amount: 0.005,
 		angle: 0.0,
 	}
@@ -452,14 +461,14 @@ function init() {
 	rgbPass.uniforms[ "amount" ].value = rgbParams.amount;
 	staticPass.uniforms[ "amount" ].value = staticParams.amount;
 	staticPass.uniforms[ "size" ].value = staticParams.size2;
-
+	
 	onToggleShaders();
+	} // if (SHADERS)	 
 	//onParamsChange();
 
-	// DAT.GUI INTERFACE
-	initializeGui();	
+	// ---------------- DAT.GUI INTERFACE ----------------
 
-	//generateGIF();
+	initializeGui();	
 				
 }
 
@@ -553,20 +562,30 @@ function onDocumentTouchMove( event ) {
 //
 
 function animate() {
-	shaderTime += 0.1;
-	badTVPass.uniforms[ 'time' ].value =  shaderTime;
-	filmPass.uniforms[ 'time' ].value =  shaderTime;
-	staticPass.uniforms[ 'time' ].value =  shaderTime;
+	
+	if (SHADERS) {
+		shaderTime += 0.1;
+		
+		badTVPass.uniforms[ 'time' ].value =  shaderTime;
+		filmPass.uniforms[ 'time' ].value =  shaderTime;
+		staticPass.uniforms[ 'time' ].value =  shaderTime;
+	}
 
-	requestAnimationFrame( animate );
+	
+
 	if ( enableOrientationControl == true) {
 		orientationControl.update();
 	}
 
 	stats.update();
-	render();
+
+	requestAnimationFrame( animate );
 	
-	composer.render( 0.1 );
+
+	if (SHADERS)
+		composer.render( 0.1 );
+	
+	render();
 
 
 }
@@ -583,21 +602,15 @@ function render() {
 
 	// ----------- TIME KEEPING -----------
 
-	var delta = clock.getDelta(),
-	time = clock.getElapsedTime() * 10;
+	//var delta = clock.getDelta(),
+	//time = clock.getElapsedTime() * 10;
+	
 
 	// ----------- ANIMATION -----------
 
 	updateAudio();
-
-
 	animateBuildings();
 
-	//material_depth.needsUpdate = true;
-	//normalMaterial.needsUpdate = true;
-	cityGeometry.verticesNeedUpdate = true;
-
-	
 	// ----------- CAMERA -----------
 
 	if (mouseMoveControl == true) {
@@ -605,10 +618,6 @@ function render() {
 		camera.position.y += ( - mouseY - camera.position.y ) * .25;
 	}
 	
-	//camera.position.y += Math.sin(time/5)*1;
-	//camera.position.x += Math.cos(time/5);
-	//camera.position.z = 15 + Math.cos(time/10)*10;
-	//console.log(camera.position);
 
 	if (!enableOrientationControl)
 		camera.lookAt( scene.position );
@@ -617,8 +626,8 @@ function render() {
 
 	//renderBokeh();
 
-
-	//renderer.render( scene, camera );
+	if (!SHADERS)
+		renderer.render( scene, camera );
 	//stats.update();
 
 }
@@ -635,69 +644,74 @@ function animateBuildings(){
 	time = clock.getElapsedTime() * 10;
 
 	//volumeHistory.push(Math.exp(normLevel+1)/5);
-	(Math.random() < 0.1) && console.log('volume', normLevel);
+	(Math.random() < 0.1) && console.log('t', time, 'volume', normLevel);
 	//(Math.random() < 0.1) && console.log('camera', camera);
 
 	volumeHistory.push(normLevel);
 	volumeHistory.shift();
 
-	rgbParams.angle = Math.random()*2
-	if (Math.random() < 0.1) { rgbParams.amount = normLevel; }
-	else { rgbParams.amount = 0.01*(Math.random()+1)/5; }
-	//rgbParams.amount = (Math.random()+1)*normLevel*0.1;
-	
-	onParamsChange();
-
 	maxDistance = 10; // fix this!
 	
-	
+	//wireframeGeometry.position.z = (0, 0, normLevel);
+	//wireframeGeometry.position = new THREE.Vector3(0, 0, normLevel*5);
+	wireframeGeometry.rotation.x = normLevel;
+	(Math.random() < 0.1) && console.log(wireframeGeometry);
 	//console.log(new Array(10).fill(0));
 	var roofDistanceToCenter;
 	var normDistance;
-
-	if ( Math.floor(Math.random() * 100) + 1  > 0){
-		//moveCenterBy = new THREE.Vector3( (Math.random()-0.5)*normLevel, (Math.random()-0.5)*normLevel,  0);
-		//center = new THREE.Vector3( -Math.random()*3 - 1.1, Math.random()*3 + 1.6,  0);
-		//center.add(moveCenterBy);
-		//console.log("MOVE CENTER");
-		//console.log(center);
-	} 
 		
 
 
-	if ( Math.floor(Math.random() * 100) + 1  > 0) {
+	// ANIMATE ROOFS
+	if (1 == 0) {
+		for ( var i = 0, l = rooflist.length; i < l; i ++ ) {					
+			//var thisroof = originalPositions[ rooflist[i] ];
+			//var roofDistanceToCenter = Math.sqrt((center.x+thisroof.x)**2 + (center.y+thisroof.y)**2);
+			//var normDistance = historyLength - Math.round( roofDistanceToCenter / maxDistance * historyLength );
+			
+			//if (i == 100) console.log(volumeHistory[normDistance]);
+			//cityGeometry.vertices[ rooflist[i] ].z = thisroof.z + 10*normLevel;// volumeHistory[normDistance]; //+ 0.2 * Math.abs((Math.sin( time * (1 / 2) + thisroof.x + (note-41)/90*Math.PI + thisroof.y))) - 0.01;
+			//cityGeometry.vertices[ rooflist[i] ].z = thisroof.z + 0.2 * Math.abs((Math.sin( time * (1 / 2) + thisroof.x + thisroof.y))) - 0.01;
+			//cityGeometry.vertices[ rooflist[i] ].z = thisroof.z + 0.2 * Math.abs((Math.sin( time * sketchParams.cubeSpeed *   normLevel * 10 * (1 / 2) + thisroof.x + sketchParams.volSens * (note-41)/90*Math.PI * 0 + thisroof.y))) - 0.01;
+			//if (volumeHistory[normDistance] > 100) 
+			//cityGeometry.vertices[ rooflist[i] ].z = thisroof.z //+ volumeHistory[normDistance]; // * normLevel * Math.sin( time * (1 / 2))**2;
+		}
+	}
+	// ANIAMTE EVERYTHING
+	if (1 == 1) {
+		for ( var i = 0, l = cityGeometry.vertices.length; i < l; i += 10 ) {
+			if (Math.random() < 0.2) {
+			// this line loses me 10 fps if the model is large
+			var roofDistanceToCenter = Math.sqrt((center.x+originalPositions[ i ].x)**2 + (center.y+originalPositions[ i ].y)**2);
 
-			// ANIMATE ROOFS
-			for ( var i = 0, l = rooflist.length; i < l; i ++ ) {					
-					var thisroof = originalPositions[ rooflist[i] ];
-					var roofDistanceToCenter = Math.sqrt((center.x+thisroof.x)**2 + (center.y+thisroof.y)**2);
-					var normDistance = historyLength - Math.round( roofDistanceToCenter / maxDistance * historyLength );
-					
-					//if (i == 100) console.log(volumeHistory[normDistance]);
-					//cityGeometry.vertices[ rooflist[i] ].z = thisroof.z + 10*normLevel;// volumeHistory[normDistance]; //+ 0.2 * Math.abs((Math.sin( time * (1 / 2) + thisroof.x + (note-41)/90*Math.PI + thisroof.y))) - 0.01;
-					//cityGeometry.vertices[ rooflist[i] ].z = thisroof.z + 0.2 * Math.abs((Math.sin( time * (1 / 2) + thisroof.x + thisroof.y))) - 0.01;
-					//cityGeometry.vertices[ rooflist[i] ].z = thisroof.z + 0.2 * Math.abs((Math.sin( time * sketchParams.cubeSpeed *   normLevel * 10 * (1 / 2) + thisroof.x + sketchParams.volSens * (note-41)/90*Math.PI * 0 + thisroof.y))) - 0.01;
-					//if (volumeHistory[normDistance] > 100) 
-					cityGeometry.vertices[ rooflist[i] ].z = thisroof.z //+ volumeHistory[normDistance]; // * normLevel * Math.sin( time * (1 / 2))**2;
+			var normDistance = historyLength - Math.round( roofDistanceToCenter / maxDistance * historyLength );
+			//cityGeometry.vertices[ i ].z = originalPositions[ i ].z + 20*(normLevel-0.2) * 0.1*(1-roofDistanceToCenter);
+
+			// as many fps (10?) as this one
+			cityGeometry.vertices[ i ].z = originalPositions[ i ].z + volumeHistory[normDistance] * 20;
 			}
 		}
-		// ANIAMTE EVERYTHING
-		for ( var i = 0, l = cityGeometry.vertices.length; i < l; i ++ ) {
-			//var roofDistanceToCenter = Math.sqrt((center.x+originalPositions[ i ].x)**2 + (center.y+originalPositions[ i ].y)**2);
-			//var normDistance = historyLength - Math.round( roofDistanceToCenter / maxDistance * historyLength );
-			//cityGeometry.vertices[ i ].z = originalPositions[ i ].z + 20*(normLevel-0.2) * 0.1*(1-roofDistanceToCenter);
-			//cityGeometry.vertices[ i ].z = originalPositions[ i ].z //+ volumeHistory[normDistance] * 5;
-		}
-
-		//console.log(thisroof);
-		//console.log(cityGeometry.vertices[ rooflist[0] ].z);
-		//cityGeometry.vertices = originalPositions.map(function (v) { return v.clone() });
-		//for ( var i = 0, l = cityGeometry.vertices.length; i < l; i ++ ) {
-			//cityGeometry.vertices[ i ].z = originalPositions[ i ].z;
-		//}
+	}
+	
 
 	//normalMaterial.needsUpdate = true;
 	cityGeometry.verticesNeedUpdate = true;
+	wireframeGeometry.verticesNeedUpdate = true; // only required if geometry previously-rendered
+
+
+	if (SHADERS) {
+	// randomize RGB shit
+	randomRGB = true
+	if (randomRGB) {
+		rgbParams.angle = Math.random()*2
+		if (Math.random() < 0.5) { rgbParams.amount = normLevel/20; }
+		else { rgbParams.amount = 0.01*(Math.random()+1)/10; }
+		//rgbParams.amount = (Math.random()+1)*normLevel*0.1;
+	}
+
+	
+	onParamsChange();
+	}	
 }
 
 function initializeCity(){
@@ -760,6 +774,8 @@ function initializeGui(){
 	};
 	gui = new dat.GUI({ autoPlace: true });
 	gui.close();
+
+	if (SHADERS) {
 	var customContainer = document.getElementById('my-gui-container');
 	document.querySelector('#gui').appendChild(gui.domElement);
 	gui.add(sketchParams, 'volSens', 0, 5).listen().step(0.1);
@@ -822,6 +838,7 @@ function initializeGui(){
 			f3.add(filmParams, 'sIntensity', 0.0, 2.0).step(0.1).onChange(onParamsChange);
 			f3.add(filmParams, 'nIntensity', 0.0, 2.0).step(0.1).onChange(onParamsChange);
 			f3.open();
+	}
 }
 
 function initPostprocessing() {
