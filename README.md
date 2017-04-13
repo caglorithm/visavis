@@ -20,5 +20,6 @@ for ( var i = 0, l = cityGeometry.vertices.length; i < l; i += 1 ) {
 	}
 }
 ```
+A couple of shaders are also applied in this gif:
 
 ![demo](assets/david_glitch.gif)
