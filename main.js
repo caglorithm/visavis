@@ -28,26 +28,17 @@ var originalPositions;
 var originalWireframe;
 var wireframeGeometry;
 
-// for manhattan_big
-//var center = new THREE.Vector3( -2.5, 1.5,  0);
-
-// for manhattan_bigger:
-//var center = new THREE.Vector3( -8, 5,  0);
-
-// for mteverst
-//var center = new THREE.Vector3( -1.1, 1.6,  0);
-
-// for mteverst_big
-//var center = new THREE.Vector3( -2.8, 3.6,  0);
+var meshes;
+var nmeshes = 6;
 
 var center = new THREE.Vector3( 0, 0,  0);
-
 
 // custom variables
 var rooflist = [];
 
 // animation
 var time;
+var animationtime = 0;
 
 // audio
 var historyLength = 50;
@@ -72,7 +63,7 @@ var effectController;
 
 // SHADERS -----------------------
 
-var SHADERS = false;
+var SHADERS = true;
 
 var composer;
 var shaderTime = 0;
@@ -89,8 +80,6 @@ init();
 animate();
 
 function init() {
-	console.log("TESTESTSETSETSETSE");
-
 	// audioHandler.js
 	audioContext = new AudioContext();
 	getMicInput();
@@ -104,7 +93,7 @@ function init() {
 	renderer.domElement.style.top = 0;
 	
 	// background color
-	renderer.setClearColor (0x2e353f, 1);
+	renderer.setClearColor (0x181919, 1);
 
 	container = document.createElement( 'div' );
 	document.body.appendChild( container );
@@ -134,6 +123,9 @@ function init() {
 
 	camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 800 );
 	
+	// --------- position camera --------
+	camera.position.z = 17;
+	camera.position.y = 10;	
 
 	// ----------- SCENE -----------
 
@@ -147,204 +139,57 @@ function init() {
 
 	var directionalLight = new THREE.DirectionalLight( 0xA0A0A0 );
 	directionalLight.position.set( 0, 0, 1 );
-	//scene.add( directionalLight );
+	scene.add( directionalLight );
 
 	// ----------- MODEL -----------
 
-	// load model, manipulate, add to mesh, add to group, add to scene
-
+	meshes = [];
 	var loader = new THREE.OBJLoader( manager );
-
 	cityGroup = new THREE.Object3D();
-	cityGeometry = new THREE.Geometry();
 
-	loader.load( 'obj/david_big.obj', function ( object ) {
-		// doesn't work: shadows?
-		//cityGroup.castsShadow = true;
-  		//cityGroup.receiveShadow = true;	
-
-  		// loop through meshes in the Group() "object"	
-		object.traverse( function ( child ) {
-			if ( child instanceof THREE.Mesh ) {
-				// get Geometry from BufferGeometry
-				cityGeometry = new THREE.Geometry().fromBufferGeometry( child.geometry );
-				child.castShadow = true;			
-				
-				// loop through / edit initial geometry here
-
-				initializeCity();
-
-				// create new mesh from geometry and a material
-				// normalMaterial doesn't work with lights!?
-
-				normalMaterial = new THREE.MeshNormalMaterial({
+	loader.load( 'obj/david_big.obj', function ( object ) {	
+		for( var i=0; i<nmeshes; i++ )
+		{
+			console.log("loading object", i);
+			// each mesh gets its own material
+			var normalMaterial = new THREE.MeshNormalMaterial({
 				    polygonOffset: true,
 				    polygonOffsetFactor: 1, // positive value pushes polygon further away
 				    polygonOffsetUnits: 1
-				});
-
-				var material = new THREE.MeshPhongMaterial( {
-						color: 0xffffff,
-						specular:0xffffff,					
-						shininess: 50,
-						reflectivity: 1.0
-					});
-				console.log("Geometry");
-				console.log(cityGeometry);
+			});
+			object.traverse( function ( child ) {
+				if ( child instanceof THREE.Mesh ) {
+				cityGeometry = new THREE.Geometry().fromBufferGeometry( child.geometry );
 				cityMesh = new THREE.Mesh(cityGeometry, normalMaterial);
+				}
+			} );
 
-			    // wireframe 
-			    var drawWireframe = true;
-			    if ( drawWireframe ) {
-				    wireframeGeometry = new THREE.EdgesGeometry( cityMesh.geometry ); // or WireframeGeometry
-				    wireframeGeometry.center( cityMesh.position ); // this re-sets the mesh position
-				    wireframeGeometry.translate(0, 0, 5);
-				    var mat = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 0.5 } );
-				    var wireframe = new THREE.LineSegments( wireframeGeometry, mat );
-				    cityMesh.add( wireframe );
-			    }
-			    
+			// move geometry to center of mesh
+			cityGeometry.center( cityMesh.position ); // this re-sets the mesh position
+			cityMesh.position.multiplyScalar( - 1 );
 
+			// FOT THE MAP DATA FROM VECTILER WE NEED TO ROTATE THE MODEL PROPERLY
+			var ROTATE_VECTILER = false
+			if (ROTATE_VECTILER) {
+				cityMesh.rotation.x= -Math.PI/2;
 			}
 
+			// rotate each mesh
+			cityMesh.rotation.z= -2*Math.PI/nmeshes * i;
+			cityMesh.translateX(nmeshes/3);
+
+			// save meshes 
+			meshes.push(cityMesh);
+			cityGroup.add(cityMesh);
 			
-
-		} );
-
-		// --------- TEMP: DRAW COORDINATE AXIS ---------
-
-		drawCoords = false
-		if (drawCoords) {
-					// coordinate systems helper
-		  var axes = new THREE.AxisHelper();            // add axes
-		  scene.add( axes );
-		  
-		  var cube = new THREE.Mesh(
-		                          new THREE.CubeGeometry( 1, .1, .1 ),
-		                          new THREE.MeshLambertMaterial( { color: 0xff0000 } )
-		                      );
-		  cube.position.set(0.5,0,0);
-		  scene.add( cube );
-		  var cube = new THREE.Mesh(
-		                          new THREE.CubeGeometry( .1, 1, .1 ),
-		                          new THREE.MeshLambertMaterial( { color: 0x00ff00 } )
-		                      );
-		  cube.position.set(0,0.5,0);
-		  scene.add( cube );
-		  var cube = new THREE.Mesh(
-		                          new THREE.CubeGeometry( .1, .1, 1 ),
-		                          new THREE.MeshLambertMaterial( { color: 0x0000ff } )
-		                      );
-		  cube.position.set(0,0,0.5);
-		  scene.add( cube );
-
-		  var light = new THREE.PointLight( 0xFFFFFF );
-		  light.position.set( 20, 20, 20 );
-		  scene.add( light );
-
-				var material = new THREE.LineBasicMaterial({
-					color: 0xffffff,
-					linewidth: 50
-				});
-
-		var geometry = new THREE.Geometry();
-		geometry.vertices.push(
-			new THREE.Vector3( -5, -5, 0 ),
-			new THREE.Vector3( -5, 5, 0 ),
-			new THREE.Vector3( 5, 5, 0 ),
-			new THREE.Vector3( 5, -5, 0 ),
-			new THREE.Vector3( -5, -5, 0 ),
-			new THREE.Vector3( 5, 5, 0 ),
-			new THREE.Vector3( 5, 5, 5 )
-		);
-
-		var line = new THREE.Line( geometry, material );
-		scene.add( line );
-
-		
-		cityGeometry.computeBoundingBox ();
-
-
-		var geometry = new THREE.Geometry();
-		geometry.vertices.push(
-			new THREE.Vector3( cityGeometry.boundingBox.min.x, cityGeometry.boundingBox.min.y, 0 ),
-			new THREE.Vector3( cityGeometry.boundingBox.min.x, cityGeometry.boundingBox.max.y, 0 ),
-			new THREE.Vector3( cityGeometry.boundingBox.max.x, cityGeometry.boundingBox.max.y, 0 ),
-			new THREE.Vector3( cityGeometry.boundingBox.max.x, cityGeometry.boundingBox.min.y, 0 )
-			//new THREE.Vector3( cityGeometry.boundingBox.min.y, -5, 0 ),
-			//new THREE.Box3 (cityGeometry.boundingBox.min, cityGeometry.boundingBox.max)
-			//new THREE.Vector3( 5, 5, 0 )
-		);
-
-		var line = new THREE.Line( geometry, material );
-		cityMesh.add( line );
-
-
-		// DRAW BOUNDING BOX OF OBJECT
-		//  This is where introtowebgl uses CubeGeometry
-		var geometry = new THREE.BoxGeometry(
-			cityGeometry.boundingBox.min.x- cityGeometry.boundingBox.max.x,
-			cityGeometry.boundingBox.min.y- cityGeometry.boundingBox.max.y,
-			cityGeometry.boundingBox.min.z- cityGeometry.boundingBox.max.z);
-
-		var material = new THREE.MeshBasicMaterial({color:0x00ff20});
-
-
-
-		
-		var cube = new THREE.Mesh(geometry,material);
-		console.log('CUBE');
-		console.log( cityMesh.position.x, cityMesh.position.y, cityMesh.position.z );
-		cube.position.set( cityGeometry.boundingBox.min.x, cityGeometry.boundingBox.min.y, cityGeometry.boundingBox.min.z );
-		console.log(cube);
-		
-		scene.add(cube);
-
-
 		}
 
-		// ----------- CENTER and ROTATE GEOMETRY TO MESH CENTER -------------
-
-		// FOT THE MAP DATA FROM VECTILER WE NEED TO ROTATE THE MODEL PROPERLY
-		var ROTATE_VECTILER = false
-		if (ROTATE_VECTILER) {
-			cityMesh.rotation.x= -Math.PI/2;
-		}
-
-		// ----------- CENTER GEOMETRY TO MESH CENTER 
-
-		cityGeometry.center( cityMesh.position ); // this re-sets the mesh position
-		cityMesh.position.multiplyScalar( - 1 );
-
-		// deep copy oriringal positions array
-		originalPositions = cityGeometry.vertices.map(function (v) { return v.clone() });
-
-		// --------- position camera --------
-		camera.position.z = 17;
-		camera.position.y = 10;		
-		
-		// add to group and render
-		cityGroup.add(cityMesh);
-		scene.add( cityGroup );	
-
-		// --------- debug output
-		console.log("cityMesh");
-		console.log(cityMesh);
-		console.log("Bounding box");
-		console.log(cityGeometry.boundingBox);
-		// default: add group
-		
-		// instead, we could also add the Mesh directly
-		//scene.add(cityMesh);
-
-		// if I add this object directly, it interacts with light... why?
-		// because it's a MeshPhongMaterial and lights attribute is true, if set to false it crashes
-		// chack if lights are on if you want to use this material!!!
-		//console.log(new THREE.Color( "#7833aa" ));
-		//object.children[0].material.emissive = new THREE.Color( "#7833aa" );
-		//scene.add(object);
-
+			
 	}, onProgress, onError );
+
+	// add whole group to scene
+	scene.add( cityGroup );	
+
 
 	// ----------- CALLBACKS -----------
 
@@ -356,16 +201,13 @@ function init() {
 	
 	window.addEventListener( 'resize', onWindowResize, false );
 
-
-	// ----------- FX -----------
-
-
 	// ----------- CONTROLS -----------
 
 	// Add OrbitControls so that we can pan around with the mouse.
 	controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.addEventListener( 'change', render );
-
+	controls.enableDamping = true;
+	controls.dampingFactor = 0.25;
 	// for smartphone device rotation control
     window.addEventListener('deviceorientation', function(e) {
       var gammaRotation = e.gamma ? e.gamma * (Math.PI / 6000) : 0;
@@ -416,8 +258,6 @@ function init() {
 	};
 
 	console.log('POSTPROCESSING ' + postprocessing.enabled );
-	//matChanger();
-
 
 	// Shaders pass ----------------------------------
 	//Create Shader Passes
@@ -561,7 +401,32 @@ function onDocumentTouchMove( event ) {
 }
 //
 
+
+
+// --------------------- a n i m a t e ---------------
+
 function animate() {
+
+	var delta = clock.getDelta()
+	time = clock.getElapsedTime();
+	animationtime += 1;
+
+	requestAnimationFrame( animate );
+
+    for( var i=0; i<nmeshes; i+=1 )
+    {
+        var m = meshes[i];
+        m.rotation.z += sketchParams.smallrot * normLevel;
+        m.translateX(4*Math.sin(animationtime/10)/20);
+        //m.position.x = 10*Math.sin(time);
+        //console.log(i, 1+0.5*Math.sin(0.2*(time)+Math.PI*2*(i/(nmeshes*nmeshes))));
+        //m.material.color.r = 1+0.5*Math.sin(0.2*(time)+Math.PI*2*(i/(nmeshes*nmeshes)));
+    }	
+    
+    cityGroup.rotation.z += normLevel * sketchParams.bigrot;
+
+    //camera.position.x = 30*Math.sin(time);
+    //camera.position.y = 20*Math.sin(time*1.5);
 	
 	if (SHADERS) {
 		shaderTime += 0.1;
@@ -578,13 +443,14 @@ function animate() {
 	}
 
 	stats.update();
-
-	requestAnimationFrame( animate );
+	controls.update();
+	
 	
 
 	if (SHADERS)
 		composer.render( 0.1 );
 	
+
 	render();
 
 
@@ -600,10 +466,10 @@ function animate() {
 
 function render() {
 
-	// ----------- TIME KEEPING -----------
+	// ----------- TIME KEEPING -----------c
 
 	//var delta = clock.getDelta(),
-	//time = clock.getElapsedTime() * 10;
+	time = clock.getElapsedTime() * 10;
 	
 
 	// ----------- ANIMATION -----------
@@ -625,7 +491,7 @@ function render() {
 	// ----------- RENDERER -----------
 
 	//renderBokeh();
-
+	//renderer.render( scene, camera );
 	if (!SHADERS)
 		renderer.render( scene, camera );
 	//stats.update();
@@ -654,8 +520,7 @@ function animateBuildings(){
 	
 	//wireframeGeometry.position.z = (0, 0, normLevel);
 	//wireframeGeometry.position = new THREE.Vector3(0, 0, normLevel*5);
-	wireframeGeometry.rotation.x = normLevel;
-	(Math.random() < 0.1) && console.log(wireframeGeometry);
+
 	//console.log(new Array(10).fill(0));
 	var roofDistanceToCenter;
 	var normDistance;
@@ -678,12 +543,11 @@ function animateBuildings(){
 		}
 	}
 	// ANIAMTE EVERYTHING
-	if (1 == 1) {
+	if (1 == 0) {
 		for ( var i = 0, l = cityGeometry.vertices.length; i < l; i += 10 ) {
 			if (Math.random() < 0.2) {
 			// this line loses me 10 fps if the model is large
 			var roofDistanceToCenter = Math.sqrt((center.x+originalPositions[ i ].x)**2 + (center.y+originalPositions[ i ].y)**2);
-
 			var normDistance = historyLength - Math.round( roofDistanceToCenter / maxDistance * historyLength );
 			//cityGeometry.vertices[ i ].z = originalPositions[ i ].z + 20*(normLevel-0.2) * 0.1*(1-roofDistanceToCenter);
 
@@ -695,8 +559,8 @@ function animateBuildings(){
 	
 
 	//normalMaterial.needsUpdate = true;
-	cityGeometry.verticesNeedUpdate = true;
-	wireframeGeometry.verticesNeedUpdate = true; // only required if geometry previously-rendered
+	//cityGeometry.verticesNeedUpdate = true;
+	//wireframeGeometry.verticesNeedUpdate = true; // only required if geometry previously-rendered
 
 
 	if (SHADERS) {
@@ -770,7 +634,8 @@ function onParamsChange() {
 function initializeGui(){
 	sketchParams = {
 		volSens: 1.0,
-		cubeSpeed: 1.0
+		bigrot: 0.05,
+		smallrot: 0.01
 	};
 	gui = new dat.GUI({ autoPlace: true });
 	gui.close();
@@ -779,7 +644,8 @@ function initializeGui(){
 	var customContainer = document.getElementById('my-gui-container');
 	document.querySelector('#gui').appendChild(gui.domElement);
 	gui.add(sketchParams, 'volSens', 0, 5).listen().step(0.1);
-	gui.add(sketchParams, 'cubeSpeed', -2, 2).step(0.1);	
+	gui.add(sketchParams, 'bigrot', 0, 0.2).step(0.01);	
+	gui.add(sketchParams, 'smallrot', 0, 0.05).step(0.001);	
 
 	var f1 = gui.addFolder('Bokeh');
 	f1.add( effectController, "enabled" ).onChange( matChanger );
