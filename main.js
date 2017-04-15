@@ -1,6 +1,8 @@
-var clock = new THREE.Clock();
+// VISAVIS
+// caglorithm@github
+// 2017
 
-//var events = new Events();
+var clock = new THREE.Clock();
 
 var container;
 
@@ -17,9 +19,9 @@ var enableOrientationControl = false;
 var orientationControl;
 
 // geometry
-var cityMesh;
-var cityGeometry;
-var cityGroup;
+var thisMesh;
+var thisGeometry;
+var thisGroup;
 var wireframeGeometry;
 var normalMaterial;
 
@@ -27,24 +29,13 @@ var originalPositions;
 
 var originalWireframe;
 var wireframeGeometry;
-
-// for manhattan_big
-//var center = new THREE.Vector3( -2.5, 1.5,  0);
-
-// for manhattan_bigger:
-//var center = new THREE.Vector3( -8, 5,  0);
-
-// for mteverst
-//var center = new THREE.Vector3( -1.1, 1.6,  0);
-
-// for mteverst_big
-//var center = new THREE.Vector3( -2.8, 3.6,  0);
+var wireframe;
+var drawWireframe = false;
 
 var center = new THREE.Vector3( 0, 0,  0);
 
-
 // custom variables
-var rooflist = [];
+var filteredVertices = [];
 
 // animation
 var time;
@@ -89,7 +80,6 @@ init();
 animate();
 
 function init() {
-	console.log("TESTESTSETSETSETSE");
 
 	// audioHandler.js
 	audioContext = new AudioContext();
@@ -155,24 +145,19 @@ function init() {
 
 	var loader = new THREE.OBJLoader( manager );
 
-	cityGroup = new THREE.Object3D();
-	cityGeometry = new THREE.Geometry();
+	thisGroup = new THREE.Object3D();
+	thisGeometry = new THREE.Geometry();
 
 	loader.load( 'obj/david_big.obj', function ( object ) {
-		// doesn't work: shadows?
-		//cityGroup.castsShadow = true;
-  		//cityGroup.receiveShadow = true;	
-
-  		// loop through meshes in the Group() "object"	
 		object.traverse( function ( child ) {
 			if ( child instanceof THREE.Mesh ) {
 				// get Geometry from BufferGeometry
-				cityGeometry = new THREE.Geometry().fromBufferGeometry( child.geometry );
-				child.castShadow = true;			
-				
+				thisGeometry = new THREE.Geometry().fromBufferGeometry( child.geometry );
+
 				// loop through / edit initial geometry here
 
-				initializeCity();
+				// not really used anymore, could comment out:
+				filterVertices();
 
 				// create new mesh from geometry and a material
 				// normalMaterial doesn't work with lights!?
@@ -189,19 +174,17 @@ function init() {
 						shininess: 50,
 						reflectivity: 1.0
 					});
-				console.log("Geometry");
-				console.log(cityGeometry);
-				cityMesh = new THREE.Mesh(cityGeometry, normalMaterial);
+
+				thisMesh = new THREE.Mesh(thisGeometry, normalMaterial);
 
 			    // wireframe 
-			    var drawWireframe = true;
 			    if ( drawWireframe ) {
-				    wireframeGeometry = new THREE.EdgesGeometry( cityMesh.geometry ); // or WireframeGeometry
-				    wireframeGeometry.center( cityMesh.position ); // this re-sets the mesh position
+				    wireframeGeometry = new THREE.EdgesGeometry( thisMesh.geometry ); // or WireframeGeometry
+				    wireframeGeometry.center( thisMesh.position ); // this re-sets the mesh position
 				    wireframeGeometry.translate(0, 0, 5);
 				    var mat = new THREE.LineBasicMaterial( { color: 0xffffff, linewidth: 0.5 } );
-				    var wireframe = new THREE.LineSegments( wireframeGeometry, mat );
-				    cityMesh.add( wireframe );
+				    wireframe = new THREE.LineSegments( wireframeGeometry, mat );
+				    thisMesh.add( wireframe );
 			    }
 			    
 
@@ -210,6 +193,37 @@ function init() {
 			
 
 		} );
+
+		// ----------- CENTER and ROTATE GEOMETRY TO MESH CENTER -------------
+
+		// FOT THE MAP DATA FROM VECTILER WE NEED TO ROTATE THE MODEL PROPERLY
+		var ROTATE_VECTILER = false
+		if (ROTATE_VECTILER) {
+			thisMesh.rotation.x= -Math.PI/2;
+		}
+
+		// ----------- CENTER GEOMETRY TO MESH CENTER 
+
+		thisGeometry.center( thisMesh.position ); // this re-sets the mesh position
+		thisMesh.position.multiplyScalar( - 1 );
+
+		// deep copy oriringal positions array
+		originalPositions = thisGeometry.vertices.map(function (v) { return v.clone() });
+
+		// --------- position camera --------
+		camera.position.z = 17;
+		camera.position.y = 10;		
+		
+		// add to group and render
+		thisGroup.add(thisMesh);
+		scene.add( thisGroup );	
+
+		// --------- debug output
+		console.log("thisMesh");
+		console.log(thisMesh);
+		console.log("Bounding box");
+		console.log(thisGeometry.boundingBox);
+
 
 		// --------- TEMP: DRAW COORDINATE AXIS ---------
 
@@ -247,102 +261,7 @@ function init() {
 					linewidth: 50
 				});
 
-		var geometry = new THREE.Geometry();
-		geometry.vertices.push(
-			new THREE.Vector3( -5, -5, 0 ),
-			new THREE.Vector3( -5, 5, 0 ),
-			new THREE.Vector3( 5, 5, 0 ),
-			new THREE.Vector3( 5, -5, 0 ),
-			new THREE.Vector3( -5, -5, 0 ),
-			new THREE.Vector3( 5, 5, 0 ),
-			new THREE.Vector3( 5, 5, 5 )
-		);
-
-		var line = new THREE.Line( geometry, material );
-		scene.add( line );
-
-		
-		cityGeometry.computeBoundingBox ();
-
-
-		var geometry = new THREE.Geometry();
-		geometry.vertices.push(
-			new THREE.Vector3( cityGeometry.boundingBox.min.x, cityGeometry.boundingBox.min.y, 0 ),
-			new THREE.Vector3( cityGeometry.boundingBox.min.x, cityGeometry.boundingBox.max.y, 0 ),
-			new THREE.Vector3( cityGeometry.boundingBox.max.x, cityGeometry.boundingBox.max.y, 0 ),
-			new THREE.Vector3( cityGeometry.boundingBox.max.x, cityGeometry.boundingBox.min.y, 0 )
-			//new THREE.Vector3( cityGeometry.boundingBox.min.y, -5, 0 ),
-			//new THREE.Box3 (cityGeometry.boundingBox.min, cityGeometry.boundingBox.max)
-			//new THREE.Vector3( 5, 5, 0 )
-		);
-
-		var line = new THREE.Line( geometry, material );
-		cityMesh.add( line );
-
-
-		// DRAW BOUNDING BOX OF OBJECT
-		//  This is where introtowebgl uses CubeGeometry
-		var geometry = new THREE.BoxGeometry(
-			cityGeometry.boundingBox.min.x- cityGeometry.boundingBox.max.x,
-			cityGeometry.boundingBox.min.y- cityGeometry.boundingBox.max.y,
-			cityGeometry.boundingBox.min.z- cityGeometry.boundingBox.max.z);
-
-		var material = new THREE.MeshBasicMaterial({color:0x00ff20});
-
-
-
-		
-		var cube = new THREE.Mesh(geometry,material);
-		console.log('CUBE');
-		console.log( cityMesh.position.x, cityMesh.position.y, cityMesh.position.z );
-		cube.position.set( cityGeometry.boundingBox.min.x, cityGeometry.boundingBox.min.y, cityGeometry.boundingBox.min.z );
-		console.log(cube);
-		
-		scene.add(cube);
-
-
 		}
-
-		// ----------- CENTER and ROTATE GEOMETRY TO MESH CENTER -------------
-
-		// FOT THE MAP DATA FROM VECTILER WE NEED TO ROTATE THE MODEL PROPERLY
-		var ROTATE_VECTILER = false
-		if (ROTATE_VECTILER) {
-			cityMesh.rotation.x= -Math.PI/2;
-		}
-
-		// ----------- CENTER GEOMETRY TO MESH CENTER 
-
-		cityGeometry.center( cityMesh.position ); // this re-sets the mesh position
-		cityMesh.position.multiplyScalar( - 1 );
-
-		// deep copy oriringal positions array
-		originalPositions = cityGeometry.vertices.map(function (v) { return v.clone() });
-
-		// --------- position camera --------
-		camera.position.z = 17;
-		camera.position.y = 10;		
-		
-		// add to group and render
-		cityGroup.add(cityMesh);
-		scene.add( cityGroup );	
-
-		// --------- debug output
-		console.log("cityMesh");
-		console.log(cityMesh);
-		console.log("Bounding box");
-		console.log(cityGeometry.boundingBox);
-		// default: add group
-		
-		// instead, we could also add the Mesh directly
-		//scene.add(cityMesh);
-
-		// if I add this object directly, it interacts with light... why?
-		// because it's a MeshPhongMaterial and lights attribute is true, if set to false it crashes
-		// chack if lights are on if you want to use this material!!!
-		//console.log(new THREE.Color( "#7833aa" ));
-		//object.children[0].material.emissive = new THREE.Color( "#7833aa" );
-		//scene.add(object);
 
 	}, onProgress, onError );
 
@@ -369,102 +288,19 @@ function init() {
 	// for smartphone device rotation control
     window.addEventListener('deviceorientation', function(e) {
       var gammaRotation = e.gamma ? e.gamma * (Math.PI / 6000) : 0;
-      //cityMesh.rotation.z = gammaRotation;
-      //cityMesh.rotation.x= -Math.PI/4;
+      //thisMesh.rotation.z = gammaRotation;
+      //thisMesh.rotation.x= -Math.PI/4;
 	});
 
 	if ( enableOrientationControl == true) {
 		console.log("Orientation control enabled.");
-    	orientationControl = new THREE.DeviceOrientationControls( cityGroup );
+    	orientationControl = new THREE.DeviceOrientationControls( thisGroup );
     	//camera.lookAt ( new THREE.Vector3( 0, 0, 10 ) );
 
     }
 
-    // ---------------- SHADERS ----------------
-    if (SHADERS) {
-	material_depth = new THREE.MeshDepthMaterial();
-	//initPostprocessing();
-
-	//renderer.autoClear = false;
-
-	effectController  = {
-
-		enabled: false,
-		jsDepthCalculation: true,
-		shaderFocus: true,
-
-		fstop: 2.2,
-		maxblur: 1.0,
-
-		showFocus: false,
-		focalDepth: 2.8,
-		manualdof: false,
-		vignetting: false,
-		depthblur: false,
-
-		threshold: 0.5,
-		gain: 2.0,
-		bias: 0.5,
-		fringe: 0.7,
-
-		focalLength: 35,
-		noise: true,
-		pentagon: false,
-
-		dithering: 0.0001
-
-	};
-
-	console.log('POSTPROCESSING ' + postprocessing.enabled );
-	//matChanger();
-
-
-	// Shaders pass ----------------------------------
-	//Create Shader Passes
-	renderPass = new THREE.RenderPass( scene, camera );
-	badTVPass = new THREE.ShaderPass( THREE.BadTVShader );
-	rgbPass = new THREE.ShaderPass( THREE.RGBShiftShader );
-	filmPass = new THREE.ShaderPass( THREE.FilmShader );
-	staticPass = new THREE.ShaderPass( THREE.StaticShader );
-	copyPass = new THREE.ShaderPass( THREE.CopyShader );
-
-	//set shader uniforms
-	filmPass.uniforms[ "grayscale" ].value = 0;
-
-	badTVParams = {
-		show: false,
-		distortion: 2.0,
-		distortion2: 1.0,
-		speed: 0.3,
-		rollSpeed: 0.01
-	}
-
-	staticParams = {
-		show: false,
-		amount:0.05,
-		size2:2.0
-	}
-
-	rgbParams = {
-		show: false,
-		amount: 0.005,
-		angle: 0.0,
-	}
-
-	filmParams = {
-		show: false,
-		count: 800,
-		sIntensity: 0.9,
-		nIntensity: 0.4
-	}
-	rgbPass.uniforms[ "angle" ].value = rgbParams.angle*Math.PI;
-	rgbPass.uniforms[ "amount" ].value = rgbParams.amount;
-	staticPass.uniforms[ "amount" ].value = staticParams.amount;
-	staticPass.uniforms[ "size" ].value = staticParams.size2;
-	
-	onToggleShaders();
-	} // if (SHADERS)	 
-	//onParamsChange();
+	 
+	//onShaderParamsChange();
 
 	// ---------------- DAT.GUI INTERFACE ----------------
 
@@ -473,21 +309,11 @@ function init() {
 }
 
 
-
 // -------------------------------------------------------
 // -------------------------------------------------------
 // -------------------------------------------------------
 // -------------------------------------------------------
 // -------------------------------------------------------
-
-
-
-
-
-
-
-
-
 
 
 function onToggleShaders(){
@@ -559,7 +385,14 @@ function onDocumentTouchMove( event ) {
 	}
 
 }
-//
+
+
+
+// -------------------------------------------------------
+// -------------------------------------------------------
+// -------------------------------------------------------
+// -------------------------------------------------------
+// -------------------------------------------------------
 
 function animate() {
 	
@@ -591,13 +424,6 @@ function animate() {
 }
 
 
-// -------------------------------------------------------
-// -------------------------------------------------------
-// -------------------------------------------------------
-// -------------------------------------------------------
-// -------------------------------------------------------
-
-
 function render() {
 
 	// ----------- TIME KEEPING -----------
@@ -609,7 +435,7 @@ function render() {
 	// ----------- ANIMATION -----------
 
 	updateAudio();
-	animateBuildings();
+	animateVertices();
 
 	// ----------- CAMERA -----------
 
@@ -633,118 +459,261 @@ function render() {
 }
 
 
-function distance(){
-
-}
-
-function animateBuildings(){
-
-	//console.log(normLevel);
+function animateVertices(){
 
 	time = clock.getElapsedTime() * 10;
 
 	//volumeHistory.push(Math.exp(normLevel+1)/5);
 	(Math.random() < 0.1) && console.log('t', time, 'volume', normLevel);
-	//(Math.random() < 0.1) && console.log('camera', camera);
 
 	volumeHistory.push(normLevel);
 	volumeHistory.shift();
 
 	maxDistance = 10; // fix this!
 	
-	//wireframeGeometry.position.z = (0, 0, normLevel);
-	//wireframeGeometry.position = new THREE.Vector3(0, 0, normLevel*5);
-	wireframeGeometry.rotation.x = normLevel;
-	(Math.random() < 0.1) && console.log(wireframeGeometry);
-	//console.log(new Array(10).fill(0));
-	var roofDistanceToCenter;
-	var normDistance;
-		
+	// ANIMATE WIREFRAME 
+	if ( drawWireframe ) {
+		(Math.random() < 0.1) && wireframe.traverse( function ( object ) { object.visible = !object.visible; } );
+	}	
 
-
-	// ANIMATE ROOFS
+	// ANIMATE filteredVertices
 	if (1 == 0) {
-		for ( var i = 0, l = rooflist.length; i < l; i ++ ) {					
-			//var thisroof = originalPositions[ rooflist[i] ];
-			//var roofDistanceToCenter = Math.sqrt((center.x+thisroof.x)**2 + (center.y+thisroof.y)**2);
-			//var normDistance = historyLength - Math.round( roofDistanceToCenter / maxDistance * historyLength );
+		for ( var i = 0, l = filteredVertices.length; i < l; i ++ ) {					
+			//var thisVertex = originalPositions[ filteredVertices[i] ];
+			//var distanceToCenter = Math.sqrt((center.x+thisVertex.x)**2 + (center.y+thisVertex.y)**2);
+			//var normDistance = historyLength - Math.round( distanceToCenter / maxDistance * historyLength );
 			
 			//if (i == 100) console.log(volumeHistory[normDistance]);
-			//cityGeometry.vertices[ rooflist[i] ].z = thisroof.z + 10*normLevel;// volumeHistory[normDistance]; //+ 0.2 * Math.abs((Math.sin( time * (1 / 2) + thisroof.x + (note-41)/90*Math.PI + thisroof.y))) - 0.01;
-			//cityGeometry.vertices[ rooflist[i] ].z = thisroof.z + 0.2 * Math.abs((Math.sin( time * (1 / 2) + thisroof.x + thisroof.y))) - 0.01;
-			//cityGeometry.vertices[ rooflist[i] ].z = thisroof.z + 0.2 * Math.abs((Math.sin( time * sketchParams.cubeSpeed *   normLevel * 10 * (1 / 2) + thisroof.x + sketchParams.volSens * (note-41)/90*Math.PI * 0 + thisroof.y))) - 0.01;
+			//thisGeometry.vertices[ filteredVertices[i] ].z = thisVertex.z + 10*normLevel;// volumeHistory[normDistance]; //+ 0.2 * Math.abs((Math.sin( time * (1 / 2) + thisVertex.x + (note-41)/90*Math.PI + thisVertex.y))) - 0.01;
+			//thisGeometry.vertices[ filteredVertices[i] ].z = thisVertex.z + 0.2 * Math.abs((Math.sin( time * (1 / 2) + thisVertex.x + thisVertex.y))) - 0.01;
+			//thisGeometry.vertices[ filteredVertices[i] ].z = thisVertex.z + 0.2 * Math.abs((Math.sin( time * sketchParams.cubeSpeed *   normLevel * 10 * (1 / 2) + thisVertex.x + sketchParams.volSens * (note-41)/90*Math.PI * 0 + thisVertex.y))) - 0.01;
 			//if (volumeHistory[normDistance] > 100) 
-			//cityGeometry.vertices[ rooflist[i] ].z = thisroof.z //+ volumeHistory[normDistance]; // * normLevel * Math.sin( time * (1 / 2))**2;
+			//thisGeometry.vertices[ filteredVertices[i] ].z = thisVertex.z //+ volumeHistory[normDistance]; // * normLevel * Math.sin( time * (1 / 2))**2;
 		}
 	}
+
 	// ANIAMTE EVERYTHING
-	if (1 == 1) {
-		for ( var i = 0, l = cityGeometry.vertices.length; i < l; i += 10 ) {
-			if (Math.random() < 0.2) {
-			// this line loses me 10 fps if the model is large
-			var roofDistanceToCenter = Math.sqrt((center.x+originalPositions[ i ].x)**2 + (center.y+originalPositions[ i ].y)**2);
+	if (sketchParams.animation) {
+		for ( var i = 0, l = thisGeometry.vertices.length; i < l; i += sketchParams.glitchSkip ) {
+			if (Math.random() < sketchParams.glitchProbability) {
+				// this line loses me 10 fps if the model is large
+				var distanceToCenter = Math.sqrt((center.x+originalPositions[ i ].x)**2 + (center.y+originalPositions[ i ].y)**2);
 
-			var normDistance = historyLength - Math.round( roofDistanceToCenter / maxDistance * historyLength );
-			//cityGeometry.vertices[ i ].z = originalPositions[ i ].z + 20*(normLevel-0.2) * 0.1*(1-roofDistanceToCenter);
+				var normDistance = historyLength - Math.round( distanceToCenter / maxDistance * historyLength );
+				//thisGeometry.vertices[ i ].z = originalPositions[ i ].z + 20*(normLevel-0.2) * 0.1*(1-distanceToCenter);
 
-			// as many fps (10?) as this one
-			cityGeometry.vertices[ i ].z = originalPositions[ i ].z + volumeHistory[normDistance] * 20;
+				// as many fps (10?) as this one
+				thisGeometry.vertices[ i ].z = originalPositions[ i ].z + volumeHistory[normDistance] * sketchParams.glitchAmplitude;
 			}
 		}
 	}
 	
-
 	//normalMaterial.needsUpdate = true;
-	cityGeometry.verticesNeedUpdate = true;
-	wireframeGeometry.verticesNeedUpdate = true; // only required if geometry previously-rendered
+	thisGeometry.verticesNeedUpdate = true;
+
+	if (drawWireframe) 
+		wireframeGeometry.verticesNeedUpdate = true; // only required if geometry previously-rendered
 
 
 	if (SHADERS) {
-	// randomize RGB shit
-	randomRGB = true
-	if (randomRGB) {
-		rgbParams.angle = Math.random()*2
-		if (Math.random() < 0.5) { rgbParams.amount = normLevel/20; }
-		else { rgbParams.amount = 0.01*(Math.random()+1)/10; }
-		//rgbParams.amount = (Math.random()+1)*normLevel*0.1;
-	}
-
-	
-	onParamsChange();
+	// randomize RGB shift shader amount and angle
+		randomRGB = true
+		if (randomRGB) {
+			rgbParams.angle = Math.random()*2
+			if (Math.random() < 0.5) { rgbParams.amount = normLevel/20; }
+			else { rgbParams.amount = 0.01*(Math.random()+1)/10; }
+			//rgbParams.amount = (Math.random()+1)*normLevel*0.1;
+		}
+		
+		onShaderParamsChange();
 	}	
 }
 
-function initializeCity(){
-	for ( var i = 0, l = cityGeometry.vertices.length; i < l; i ++ ) {
-		//cityGeometry.vertices[ i ].z = 0.35 * Math.sin( i / 2 );
-		if ( cityGeometry.vertices[ i ].z > 0.04 ) {
-			rooflist.push(i);
+function filterVertices(){
+	for ( var i = 0, l = thisGeometry.vertices.length; i < l; i ++ ) {
+		//thisGeometry.vertices[ i ].z = 0.35 * Math.sin( i / 2 );
+		if ( thisGeometry.vertices[ i ].z > 0.04 ) {
+			filteredVertices.push(i);
 		}
 	}
 
-	console.log("roofs");
-	console.log(rooflist);
+	console.log("Filtered vertices");
+	console.log(filteredVertices);
 }
 
-
-
-
-
-
-
-
-
 // -------------------------------------------------------
 // -------------------------------------------------------
 // -------------------------------------------------------
 // -------------------------------------------------------
 // -------------------------------------------------------
 
+function initializeGui(){
 
 
+	sketchParams = {
+		animation: true,
+		volSens: 1.0,
+		glitchAmplitude: 20.0,
+		glitchProbability: 0.1,
+		glitchSkip: 10
+	};
+	gui = new dat.GUI({ autoPlace: true });
 
+	var customContainer = document.getElementById('my-gui-container');
+	document.querySelector('#gui').appendChild(gui.domElement);
+	
+	var f0 = gui.addFolder('Animation');
+	f0.add(sketchParams, 'animation');
+	f0.add(sketchParams, 'volSens', 0, 8).listen().step(0.1);
+	f0.add(sketchParams, 'glitchAmplitude', 0, 40).step(1);
+	f0.add(sketchParams, 'glitchProbability', 0, 1).step(0.05);
+	f0.add(sketchParams, 'glitchSkip', 1, 100).step(1);	
+	f0.open();
 
-function onParamsChange() {
+	if (SHADERS) {
+
+	    // ---------------- BOKEH PARAMETERS ----------------
+		material_depth = new THREE.MeshDepthMaterial();
+		effectController  = {
+
+			enabled: false,
+			jsDepthCalculation: true,
+			shaderFocus: true,
+
+			fstop: 2.2,
+			maxblur: 1.0,
+
+			showFocus: false,
+			focalDepth: 2.8,
+			manualdof: false,
+			vignetting: false,
+			depthblur: false,
+
+			threshold: 0.5,
+			gain: 2.0,
+			bias: 0.5,
+			fringe: 0.7,
+
+			focalLength: 35,
+			noise: true,
+			pentagon: false,
+
+			dithering: 0.0001
+
+		};
+
+		console.log('POSTPROCESSING ' + postprocessing.enabled );
+
+		// Shaders pass ----------------------------------
+		//Create Shader Passes
+		renderPass = new THREE.RenderPass( scene, camera );
+		badTVPass = new THREE.ShaderPass( THREE.BadTVShader );
+		rgbPass = new THREE.ShaderPass( THREE.RGBShiftShader );
+		filmPass = new THREE.ShaderPass( THREE.FilmShader );
+		staticPass = new THREE.ShaderPass( THREE.StaticShader );
+		copyPass = new THREE.ShaderPass( THREE.CopyShader );
+
+		//set shader uniforms
+		filmPass.uniforms[ "grayscale" ].value = 0;
+
+		badTVParams = {
+			show: false,
+			distortion: 2.0,
+			distortion2: 1.0,
+			speed: 0.3,
+			rollSpeed: 0.01
+		}
+
+		staticParams = {
+			show: false,
+			amount:0.05,
+			size2:2.0
+		}
+
+		rgbParams = {
+			show: false,
+			amount: 0.005,
+			angle: 0.0,
+		}
+
+		filmParams = {
+			show: false,
+			count: 800,
+			sIntensity: 0.9,
+			nIntensity: 0.4
+		}
+		rgbPass.uniforms[ "angle" ].value = rgbParams.angle*Math.PI;
+		rgbPass.uniforms[ "amount" ].value = rgbParams.amount;
+		staticPass.uniforms[ "amount" ].value = staticParams.amount;
+		staticPass.uniforms[ "size" ].value = staticParams.size2;
+		
+		onToggleShaders();
+
+		// ---------- MENU ITEMS ----------
+
+		var f1 = gui.addFolder('Bokeh');
+		f1.add( effectController, "enabled" ).onChange( bokehMatChanger );
+		f1.add( effectController, "jsDepthCalculation" ).onChange( bokehMatChanger );
+		f1.add( effectController, "shaderFocus" ).onChange( bokehMatChanger );
+		f1.add( effectController, "focalDepth", 0.0, 200.0 ).listen().onChange( bokehMatChanger );
+
+		f1.add( effectController, "fstop", 0.1, 22, 0.001 ).onChange( bokehMatChanger );
+		f1.add( effectController, "maxblur", 0.0, 5.0, 0.025 ).onChange( bokehMatChanger );
+
+		f1.add( effectController, "showFocus" ).onChange( bokehMatChanger );
+		f1.add( effectController, "manualdof" ).onChange( bokehMatChanger );
+		f1.add( effectController, "vignetting" ).onChange( bokehMatChanger );
+
+		f1.add( effectController, "depthblur" ).onChange( bokehMatChanger );
+
+		f1.add( effectController, "threshold", 0, 1, 0.001 ).onChange( bokehMatChanger );
+		f1.add( effectController, "gain", 0, 100, 0.001 ).onChange( bokehMatChanger );
+		f1.add( effectController, "bias", 0,3, 0.001 ).onChange( bokehMatChanger );
+		f1.add( effectController, "fringe", 0, 5, 0.001 ).onChange( bokehMatChanger );
+
+		f1.add( effectController, "focalLength", 16, 80, 0.001 ).onChange( bokehMatChanger );
+
+		f1.add( effectController, "noise" ).onChange( bokehMatChanger );
+
+		f1.add( effectController, "dithering", 0, 0.001, 0.0001 ).onChange( bokehMatChanger );
+
+		f1.add( effectController, "pentagon" ).onChange( bokehMatChanger );
+
+		f1.add( shaderSettings, "rings", 1, 8).step(1).onChange( shaderUpdate );
+		f1.add( shaderSettings, "samples", 1, 13).step(1).onChange( shaderUpdate );	
+
+		var f1 = gui.addFolder('Bad TV');
+		f1.add(badTVParams, 'show').onChange(onToggleShaders);
+		f1.add(badTVParams, 'distortion', 0.1, 20).step(0.1).listen().name("Thick Distort").onChange(onShaderParamsChange);
+		f1.add(badTVParams, 'distortion2', 0.1, 20).step(0.1).listen().name("Fine Distort").onChange(onShaderParamsChange);
+		f1.add(badTVParams, 'speed', 0.0,1.0).step(0.01).listen().name("Distort Speed").onChange(onShaderParamsChange);
+		f1.add(badTVParams, 'rollSpeed', 0.0,1.0).step(0.01).listen().name("Roll Speed").onChange(onShaderParamsChange);
+		f1.open();
+
+		var f2 = gui.addFolder('RGB Shift');
+		f2.add(rgbParams, 'show').onChange(onToggleShaders);
+		f2.add(rgbParams, 'amount', 0.0, 0.1).listen().onChange(onShaderParamsChange);
+		f2.add(rgbParams, 'angle', 0.0, 2.0).listen().onChange(onShaderParamsChange);
+		f2.open();
+
+		var f4 = gui.addFolder('Static');
+		f4.add(staticParams, 'show').onChange(onToggleShaders);
+		f4.add(staticParams, 'amount', 0.0,1.0).step(0.01).listen().onChange(onShaderParamsChange);
+		f4.add(staticParams, 'size2', 1.0,100.0).step(1.0).onChange(onShaderParamsChange);
+		f4.open();
+
+		var f3 = gui.addFolder('Scanlines');
+		f3.add(filmParams, 'show').onChange(onToggleShaders);
+		f3.add(filmParams, 'count', 50, 1000).onChange(onShaderParamsChange);
+		f3.add(filmParams, 'sIntensity', 0.0, 2.0).step(0.1).onChange(onShaderParamsChange);
+		f3.add(filmParams, 'nIntensity', 0.0, 2.0).step(0.1).onChange(onShaderParamsChange);
+		f3.open();
+	}
+
+	gui.close();
+}
+
+function onShaderParamsChange() {
 	//copy gui params into shader uniforms
 	badTVPass.uniforms[ "distortion" ].value = badTVParams.distortion;
 	badTVPass.uniforms[ "distortion2" ].value = badTVParams.distortion2;
@@ -763,83 +732,6 @@ function onParamsChange() {
 }
 
 
-
-
-
-
-function initializeGui(){
-	sketchParams = {
-		volSens: 1.0,
-		cubeSpeed: 1.0
-	};
-	gui = new dat.GUI({ autoPlace: true });
-	gui.close();
-
-	if (SHADERS) {
-	var customContainer = document.getElementById('my-gui-container');
-	document.querySelector('#gui').appendChild(gui.domElement);
-	gui.add(sketchParams, 'volSens', 0, 5).listen().step(0.1);
-	gui.add(sketchParams, 'cubeSpeed', -2, 2).step(0.1);	
-
-	var f1 = gui.addFolder('Bokeh');
-	f1.add( effectController, "enabled" ).onChange( matChanger );
-	f1.add( effectController, "jsDepthCalculation" ).onChange( matChanger );
-	f1.add( effectController, "shaderFocus" ).onChange( matChanger );
-	f1.add( effectController, "focalDepth", 0.0, 200.0 ).listen().onChange( matChanger );
-
-	f1.add( effectController, "fstop", 0.1, 22, 0.001 ).onChange( matChanger );
-	f1.add( effectController, "maxblur", 0.0, 5.0, 0.025 ).onChange( matChanger );
-
-	f1.add( effectController, "showFocus" ).onChange( matChanger );
-	f1.add( effectController, "manualdof" ).onChange( matChanger );
-	f1.add( effectController, "vignetting" ).onChange( matChanger );
-
-	f1.add( effectController, "depthblur" ).onChange( matChanger );
-
-	f1.add( effectController, "threshold", 0, 1, 0.001 ).onChange( matChanger );
-	f1.add( effectController, "gain", 0, 100, 0.001 ).onChange( matChanger );
-	f1.add( effectController, "bias", 0,3, 0.001 ).onChange( matChanger );
-	f1.add( effectController, "fringe", 0, 5, 0.001 ).onChange( matChanger );
-
-	f1.add( effectController, "focalLength", 16, 80, 0.001 ).onChange( matChanger );
-
-	f1.add( effectController, "noise" ).onChange( matChanger );
-
-	f1.add( effectController, "dithering", 0, 0.001, 0.0001 ).onChange( matChanger );
-
-	f1.add( effectController, "pentagon" ).onChange( matChanger );
-
-	f1.add( shaderSettings, "rings", 1, 8).step(1).onChange( shaderUpdate );
-	f1.add( shaderSettings, "samples", 1, 13).step(1).onChange( shaderUpdate );	
-
-			var f1 = gui.addFolder('Bad TV');
-			f1.add(badTVParams, 'show').onChange(onToggleShaders);
-			f1.add(badTVParams, 'distortion', 0.1, 20).step(0.1).listen().name("Thick Distort").onChange(onParamsChange);
-			f1.add(badTVParams, 'distortion2', 0.1, 20).step(0.1).listen().name("Fine Distort").onChange(onParamsChange);
-			f1.add(badTVParams, 'speed', 0.0,1.0).step(0.01).listen().name("Distort Speed").onChange(onParamsChange);
-			f1.add(badTVParams, 'rollSpeed', 0.0,1.0).step(0.01).listen().name("Roll Speed").onChange(onParamsChange);
-			f1.open();
-
-			var f2 = gui.addFolder('RGB Shift');
-			f2.add(rgbParams, 'show').onChange(onToggleShaders);
-			f2.add(rgbParams, 'amount', 0.0, 0.1).listen().onChange(onParamsChange);
-			f2.add(rgbParams, 'angle', 0.0, 2.0).listen().onChange(onParamsChange);
-			f2.open();
-
-			var f4 = gui.addFolder('Static');
-			f4.add(staticParams, 'show').onChange(onToggleShaders);
-			f4.add(staticParams, 'amount', 0.0,1.0).step(0.01).listen().onChange(onParamsChange);
-			f4.add(staticParams, 'size2', 1.0,100.0).step(1.0).onChange(onParamsChange);
-			f4.open();
-
-			var f3 = gui.addFolder('Scanlines');
-			f3.add(filmParams, 'show').onChange(onToggleShaders);
-			f3.add(filmParams, 'count', 50, 1000).onChange(onParamsChange);
-			f3.add(filmParams, 'sIntensity', 0.0, 2.0).step(0.1).onChange(onParamsChange);
-			f3.add(filmParams, 'nIntensity', 0.0, 2.0).step(0.1).onChange(onParamsChange);
-			f3.open();
-	}
-}
 
 function initPostprocessing() {
 	console.log('INIT 0 ' + postprocessing.enabled );
@@ -905,7 +797,7 @@ function renderBokeh( ) {
 				return Math.max(0, Math.min(1, x));
 			}
 
-if ( postprocessing.enabled ) {
+		if ( postprocessing.enabled ) {
 
 				if ( effectController.jsDepthCalculation ) {
 
@@ -961,17 +853,16 @@ if ( postprocessing.enabled ) {
 
 }
 
-function matChanger( ) {
-for (var e in effectController) {
-	if (e in postprocessing.bokeh_uniforms)
-	postprocessing.bokeh_uniforms[ e ].value = effectController[ e ];
-}
+function bokehMatChanger( ) {
+	for (var e in effectController) {
+		if (e in postprocessing.bokeh_uniforms)
+		postprocessing.bokeh_uniforms[ e ].value = effectController[ e ];
+	}
 
-postprocessing.enabled = effectController.enabled;
-postprocessing.bokeh_uniforms[ 'znear' ].value = camera.near;
-postprocessing.bokeh_uniforms[ 'zfar' ].value = camera.far;
-camera.setFocalLength(effectController.focalLength);
-
+	postprocessing.enabled = effectController.enabled;
+	postprocessing.bokeh_uniforms[ 'znear' ].value = camera.near;
+	postprocessing.bokeh_uniforms[ 'zfar' ].value = camera.far;
+	camera.setFocalLength(effectController.focalLength);
 };    
 
 function shaderUpdate() {
