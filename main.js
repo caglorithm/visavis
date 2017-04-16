@@ -30,7 +30,7 @@ var originalPositions;
 var originalWireframe;
 var wireframeGeometry;
 var wireframe;
-var drawWireframe = false;
+var drawWireframe = true;
 
 var center = new THREE.Vector3( 0, 0,  0);
 
@@ -63,7 +63,7 @@ var effectController;
 
 // SHADERS -----------------------
 
-var SHADERS = false;
+var SHADERS = true;
 
 var composer;
 var shaderTime = 0;
@@ -319,8 +319,9 @@ function init() {
 function onToggleShaders(){
 	//Add Shader Passes to Composer
 	//order is important 
-	composer = new THREE.EffectComposer( renderer);
+	composer = new THREE.EffectComposer( renderer );
 	composer.addPass( renderPass );
+
 	if (filmParams.show){
 		composer.addPass( filmPass );
 	}
@@ -336,6 +337,7 @@ function onToggleShaders(){
 	if (staticParams.show){
 		composer.addPass( staticPass );
 	}
+
 	composer.addPass( copyPass );
 	copyPass.renderToScreen = true;
 }
@@ -627,7 +629,7 @@ function initializeGui(){
 		staticParams = {
 			show: false,
 			amount:0.05,
-			size2:2.0
+			size:2.0
 		}
 
 		rgbParams = {
@@ -640,12 +642,13 @@ function initializeGui(){
 			show: false,
 			count: 800,
 			sIntensity: 0.9,
-			nIntensity: 0.4
+			nIntensity: 0.4,
+			grayscale: false
 		}
 		rgbPass.uniforms[ "angle" ].value = rgbParams.angle*Math.PI;
 		rgbPass.uniforms[ "amount" ].value = rgbParams.amount;
 		staticPass.uniforms[ "amount" ].value = staticParams.amount;
-		staticPass.uniforms[ "size" ].value = staticParams.size2;
+		staticPass.uniforms[ "size" ].value = staticParams.size;
 		
 		onToggleShaders();
 
@@ -699,7 +702,7 @@ function initializeGui(){
 		var f4 = gui.addFolder('Static');
 		f4.add(staticParams, 'show').onChange(onToggleShaders);
 		f4.add(staticParams, 'amount', 0.0,1.0).step(0.01).listen().onChange(onShaderParamsChange);
-		f4.add(staticParams, 'size2', 1.0,100.0).step(1.0).onChange(onShaderParamsChange);
+		f4.add(staticParams, 'size', 1.0,100.0).step(1.0).onChange(onShaderParamsChange);
 		f4.open();
 
 		var f3 = gui.addFolder('Scanlines');
@@ -707,6 +710,7 @@ function initializeGui(){
 		f3.add(filmParams, 'count', 50, 1000).onChange(onShaderParamsChange);
 		f3.add(filmParams, 'sIntensity', 0.0, 2.0).step(0.1).onChange(onShaderParamsChange);
 		f3.add(filmParams, 'nIntensity', 0.0, 2.0).step(0.1).onChange(onShaderParamsChange);
+		f3.add(filmParams, 'grayscale').onChange(onToggleShaders);
 		f3.open();
 	}
 
@@ -721,7 +725,7 @@ function onShaderParamsChange() {
 	badTVPass.uniforms[ "rollSpeed" ].value = badTVParams.rollSpeed;
 
 	staticPass.uniforms[ "amount" ].value = staticParams.amount;
-	staticPass.uniforms[ "size" ].value = staticParams.size2;
+	staticPass.uniforms[ "size" ].value = staticParams.size;
 
 	rgbPass.uniforms[ "angle" ].value = rgbParams.angle*Math.PI;
 	rgbPass.uniforms[ "amount" ].value = rgbParams.amount;
@@ -729,6 +733,7 @@ function onShaderParamsChange() {
 	filmPass.uniforms[ "sCount" ].value = filmParams.count;
 	filmPass.uniforms[ "sIntensity" ].value = filmParams.sIntensity;
 	filmPass.uniforms[ "nIntensity" ].value = filmParams.nIntensity;
+	filmPass.uniforms[ "grayscale" ].value = filmParams.grayscale;
 }
 
 
