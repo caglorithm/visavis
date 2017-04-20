@@ -7,6 +7,9 @@ var clock = new THREE.Clock();
 var container;
 
 var camera, scene, renderer, stats;
+var controls;
+var meshControls;
+
 
 var mouseX = 0, mouseY = 0;
 
@@ -30,7 +33,7 @@ var originalPositions;
 var originalWireframe;
 var wireframeGeometry;
 var wireframe;
-var drawWireframe = true;
+var drawWireframe = false;
 
 var center = new THREE.Vector3( 0, 0,  0);
 
@@ -133,11 +136,23 @@ function init() {
 	// ----------- LIGHTS -----------
 
 	var ambient = new THREE.AmbientLight( 0x3010A0 );
-	//scene.add( ambient );
+	scene.add( ambient );
 
 	var directionalLight = new THREE.DirectionalLight( 0xA0A0A0 );
-	directionalLight.position.set( 0, 0, 1 );
-	//scene.add( directionalLight );
+	directionalLight.position.set( 0, 1, 0 );
+	scene.add( directionalLight );
+
+	// FLOOR
+	//var floorTexture = new THREE.ImageUtils.loadTexture( 'images/checkerboard.jpg' );
+	//floorTexture.wrapS = floorTexture.wrapT = THREE.RepeatWrapping; 
+	//floorTexture.repeat.set( 10, 10 );
+	//var floorMaterial = new THREE.MeshBasicMaterial( { map: floorTexture, side: THREE.DoubleSide } );
+	var floorMaterial = new THREE.MeshBasicMaterial( { color: 0x050505, wireframe: true, side: THREE.DoubleSide } );
+	var floorGeometry = new THREE.PlaneGeometry(1000, 1000, 10, 10);
+	var floor = new THREE.Mesh(floorGeometry, floorMaterial);
+	floor.position.y = -4;
+	floor.rotation.x = Math.PI / 2;
+	//scene.add(floor);
 
 	// ----------- MODEL -----------
 
@@ -225,6 +240,56 @@ function init() {
 		console.log(thisGeometry.boundingBox);
 
 
+		// --------------- LEA{P} MO{T}ION TEST ---------
+
+		var fingers = {};
+  		var spheres = {};
+
+
+		Leap.loop(function(frame) {
+
+		    var fingerIds = {};
+		    var handIds = {};
+
+		    for (var index = 0; index < frame.pointables.length; index++) {
+
+		      var pointable = frame.pointables[index];
+		      var finger = fingers[pointable.id];
+
+		      var pos = pointable.tipPosition;
+		      var dir = pointable.direction;
+
+		      var origin = new THREE.Vector3(pos[0], pos[1], pos[2]);
+		      var direction = new THREE.Vector3(dir[0], dir[1], dir[2]);
+
+		      if (!finger) {
+		        finger = new THREE.ArrowHelper(origin, direction, 20, Math.random() * 0xffffff);
+		        fingers[pointable.id] = finger;
+		        scene.add(finger);
+		      }
+
+		      finger.position = origin;
+		      finger.setDirection(direction);
+
+		      fingerIds[pointable.id] = true;
+		    }
+
+		    for (fingerId in fingers) {
+		      if (!fingerIds[fingerId]) {
+		        scene.remove(fingers[fingerId]);
+		        delete fingers[fingerId];
+		      }
+		    }
+		    
+		    if(frame.gestures.length > 0) console.log(frame.gestures);
+
+
+		    controls.update(frame);
+		    //meshControls.update(frame);
+    		//renderer.render(scene, camera);
+  		});
+
+
 		// --------- TEMP: DRAW COORDINATE AXIS ---------
 
 		drawCoords = false
@@ -269,10 +334,10 @@ function init() {
 
 	// add some event listeners
 
-	document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+	//document.addEventListener( 'mousemove', onDocumentMouseMove, false );
 	//document.addEventListener( 'touchstart', onDocumentTouchStart, false );
 	//document.addEventListener( 'touchmove', onDocumentTouchMove, false );	
-	
+	document.addEventListener("keydown",keyDownHandler, false);
 	window.addEventListener( 'resize', onWindowResize, false );
 
 
@@ -284,6 +349,9 @@ function init() {
 	// Add OrbitControls so that we can pan around with the mouse.
 	controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.addEventListener( 'change', render );
+
+    controls = new THREE.LeapCameraControls(camera);
+    meshControls = new THREE.LeapObjectControls(camera, thisGroup);
 
 	// for smartphone device rotation control
     window.addEventListener('deviceorientation', function(e) {
@@ -475,7 +543,7 @@ function animateVertices(){
 	
 	// ANIMATE WIREFRAME 
 	if ( drawWireframe ) {
-		(Math.random() < 0.1) && wireframe.traverse( function ( object ) { object.visible = !object.visible; } );
+		//(Math.random() < 0.1) && wireframe.traverse( function ( object ) { object.visible = !object.visible; } );
 	}	
 
 	// ANIMATE filteredVertices
@@ -505,10 +573,15 @@ function animateVertices(){
 				//thisGeometry.vertices[ i ].z = originalPositions[ i ].z + 20*(normLevel-0.2) * 0.1*(1-distanceToCenter);
 
 				// as many fps (10?) as this one
-				thisGeometry.vertices[ i ].z = originalPositions[ i ].z + volumeHistory[normDistance] * sketchParams.glitchAmplitude;
+				sketchParams.glitchAmplitude = Math.exp(normLevel+1);
+				thisGeometry.vertices[ i ].z = originalPositions[ i ].z + volumeHistory[normDistance] * sketchParams.glitchAmplitude * Math.sin(time/20*sketchParams.glitchRotationSpeed*normLevel);
+				thisGeometry.vertices[ i ].x = originalPositions[ i ].x + volumeHistory[normDistance] * sketchParams.glitchAmplitude * Math.cos(time/20*sketchParams.glitchRotationSpeed*normLevel);
+
+
 			}
 		}
 	}
+
 	
 	//normalMaterial.needsUpdate = true;
 	thisGeometry.verticesNeedUpdate = true;
@@ -521,9 +594,13 @@ function animateVertices(){
 	// randomize RGB shift shader amount and angle
 		randomRGB = true
 		if (randomRGB) {
-			rgbParams.angle = Math.random()*2
-			if (Math.random() < 0.5) { rgbParams.amount = normLevel/20; }
-			else { rgbParams.amount = 0.01*(Math.random()+1)/10; }
+			if (normLevel>0.2) { 
+				rgbParams.amount = normLevel/20; 
+				rgbParams.angle = Math.random()*2
+			}
+			else { 
+				rgbParams.amount = 0.01 * Math.sin(time/50); 
+			}
 			//rgbParams.amount = (Math.random()+1)*normLevel*0.1;
 		}
 		
@@ -543,6 +620,18 @@ function filterVertices(){
 	console.log(filteredVertices);
 }
 
+function keyDownHandler(event){
+	var keyPressed = String.fromCharCode(event.keyCode);
+
+	if (keyPressed == "R") {
+		for ( var i = 0, l = thisGeometry.vertices.length; i < l; i += 1 ) {
+			thisGeometry.vertices[ i ].x = originalPositions[ i ].x;
+			thisGeometry.vertices[ i ].y = originalPositions[ i ].y;
+			thisGeometry.vertices[ i ].z = originalPositions[ i ].z;
+		}
+	}
+}
+
 // -------------------------------------------------------
 // -------------------------------------------------------
 // -------------------------------------------------------
@@ -557,7 +646,8 @@ function initializeGui(){
 		volSens: 1.0,
 		glitchAmplitude: 20.0,
 		glitchProbability: 0.1,
-		glitchSkip: 10
+		glitchSkip: 10,
+		glitchRotationSpeed: 1
 	};
 	gui = new dat.GUI({ autoPlace: true });
 
@@ -566,10 +656,11 @@ function initializeGui(){
 	
 	var f0 = gui.addFolder('Animation');
 	f0.add(sketchParams, 'animation');
-	f0.add(sketchParams, 'volSens', 0, 8).listen().step(0.1);
+	f0.add(sketchParams, 'volSens', 0, 4).listen().step(0.02);
 	f0.add(sketchParams, 'glitchAmplitude', 0, 40).step(1);
 	f0.add(sketchParams, 'glitchProbability', 0, 1).step(0.05);
 	f0.add(sketchParams, 'glitchSkip', 1, 100).step(1);	
+	f0.add(sketchParams, 'glitchRotationSpeed', 0, 1, 0.01)
 	f0.open();
 
 	if (SHADERS) {
