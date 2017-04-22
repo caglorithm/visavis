@@ -29,7 +29,7 @@ var originalWireframe;
 var wireframeGeometry;
 
 var meshes;
-var nmeshes = 6;
+var nmeshes = 4;
 
 var center = new THREE.Vector3( 0, 0,  0);
 
@@ -86,7 +86,7 @@ function init() {
 
 	// ----------- RENDERER -----------
 
-	renderer = new THREE.WebGLRenderer();
+	renderer = new THREE.WebGLRenderer(  );
 	renderer.setPixelRatio( window.devicePixelRatio );
 	renderer.setSize( window.innerWidth, window.innerHeight );
 	renderer.domElement.style.position = 'absolute';
@@ -147,7 +147,7 @@ function init() {
 	var loader = new THREE.OBJLoader( manager );
 	cityGroup = new THREE.Object3D();
 
-	loader.load( 'obj/david_big.obj', function ( object ) {	
+	loader.load( 'obj/manhattan_bigger.obj', function ( object ) {	
 		for( var i=0; i<nmeshes; i++ )
 		{
 			console.log("loading object", i);
@@ -169,14 +169,16 @@ function init() {
 			cityMesh.position.multiplyScalar( - 1 );
 
 			// FOT THE MAP DATA FROM VECTILER WE NEED TO ROTATE THE MODEL PROPERLY
-			var ROTATE_VECTILER = false
+			var ROTATE_VECTILER = true
 			if (ROTATE_VECTILER) {
 				cityMesh.rotation.x= -Math.PI/2;
 			}
 
-			// rotate each mesh
+			// rotate each mesh around a center
+			//cityMesh.translateX(nmeshes/3)
+			cityMesh.translateX(5*Math.cos(-2*Math.PI/nmeshes * (i)));
+			cityMesh.translateY(5*Math.sin(-2*Math.PI/nmeshes * (i)));
 			cityMesh.rotation.z= -2*Math.PI/nmeshes * i;
-			cityMesh.translateX(nmeshes/3);
 
 			// save meshes 
 			meshes.push(cityMesh);
@@ -417,13 +419,13 @@ function animate() {
     {
         var m = meshes[i];
         m.rotation.z += sketchParams.smallrot * normLevel;
-        m.translateX(4*Math.sin(animationtime/10)/20);
-        //m.position.x = 10*Math.sin(time);
+        m.translateX(normLevel*2*Math.sin(animationtime/50)/20);
+        //m.position.x = 10*Math.sin(animationtime/50);
         //console.log(i, 1+0.5*Math.sin(0.2*(time)+Math.PI*2*(i/(nmeshes*nmeshes))));
         //m.material.color.r = 1+0.5*Math.sin(0.2*(time)+Math.PI*2*(i/(nmeshes*nmeshes)));
     }	
     
-    cityGroup.rotation.z += normLevel * sketchParams.bigrot;
+    cityGroup.rotation.y += normLevel * sketchParams.bigrot;
 
     //camera.position.x = 30*Math.sin(time);
     //camera.position.y = 20*Math.sin(time*1.5);
@@ -644,7 +646,7 @@ function initializeGui(){
 	var customContainer = document.getElementById('my-gui-container');
 	document.querySelector('#gui').appendChild(gui.domElement);
 	gui.add(sketchParams, 'volSens', 0, 5).listen().step(0.1);
-	gui.add(sketchParams, 'bigrot', 0, 0.2).step(0.01);	
+	gui.add(sketchParams, 'bigrot', 0, 0.1).step(0.001);	
 	gui.add(sketchParams, 'smallrot', 0, 0.05).step(0.001);	
 
 	var f1 = gui.addFolder('Bokeh');
